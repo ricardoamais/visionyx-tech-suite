@@ -9,41 +9,128 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Eye, Edit, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Search, Eye, Edit, Trash2, Loader2 } from "lucide-react";
+import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
+import { useClientes } from "@/hooks/useClientes";
 
-const statusOptions = ["Aberto", "Em análise", "Aguardando aprovação", "Em manutenção", "Finalizado", "Entregue"];
-
-interface OS {
-  id: string; numero: string; data: string; cliente: string; equipamento: string; problema: string;
-  diagnostico: string; servicos: string; pecas: string; valorMaoObra: number; valorPecas: number;
-  status: string; tecnico: string; dataEntrega: string;
-}
-
-const initial: OS[] = [
-  { id: "1", numero: "OS-001", data: "2026-03-22", cliente: "João Silva", equipamento: "Notebook Dell Inspiron 15", problema: "Não liga", diagnostico: "Placa mãe com defeito", servicos: "Troca de placa mãe", pecas: "Placa mãe Dell", valorMaoObra: 150, valorPecas: 450, status: "Em manutenção", tecnico: "Carlos", dataEntrega: "" },
-  { id: "2", numero: "OS-002", data: "2026-03-21", cliente: "Maria Santos", equipamento: "PC Gamer i7", problema: "Tela azul constante", diagnostico: "Memória RAM com defeito", servicos: "Teste e troca de memória", pecas: "Memória DDR4 16GB", valorMaoObra: 80, valorPecas: 320, status: "Aberto", tecnico: "André", dataEntrega: "" },
-  { id: "3", numero: "OS-003", data: "2026-03-20", cliente: "Carlos Oliveira", equipamento: "Impressora HP LaserJet", problema: "Não imprime", diagnostico: "Cabeça de impressão obstruída", servicos: "Limpeza e manutenção", pecas: "", valorMaoObra: 120, valorPecas: 0, status: "Finalizado", tecnico: "Carlos", dataEntrega: "2026-03-22" },
-  { id: "4", numero: "OS-004", data: "2026-03-19", cliente: "Ana Costa", equipamento: "Monitor LG 24\"", problema: "Manchas na tela", diagnostico: "Backlight com defeito", servicos: "Troca de backlight", pecas: "LED backlight", valorMaoObra: 100, valorPecas: 80, status: "Aguardando aprovação", tecnico: "André", dataEntrega: "" },
+const statusOptions = [
+  { value: "aberto", label: "Aberto" },
+  { value: "em_analise", label: "Em análise" },
+  { value: "aguardando_aprovacao", label: "Aguardando aprovação" },
+  { value: "em_manutencao", label: "Em manutenção" },
+  { value: "finalizado", label: "Finalizado" },
+  { value: "entregue", label: "Entregue" },
 ];
 
+const statusLabel = (val: string) => statusOptions.find(s => s.value === val)?.label ?? val;
+
+const emptyForm = {
+  cliente_id: "",
+  problema_relatado: "",
+  diagnostico: "",
+  servicos_realizados: "",
+  valor_mao_obra: 0,
+  valor_pecas: 0,
+  status: "aberto" as string,
+  observacoes: "",
+};
+
 export default function OrdensServico() {
-  const [items, setItems] = useState(initial);
+  const { data: ordens, isLoading } = useOrdensServico();
+  const { data: clientes } = useClientes();
+  const createOS = useCreateOS();
+  const updateOS = useUpdateOS();
+  const deleteOS = useDeleteOS();
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewing, setViewing] = useState<OS | null>(null);
+  const [viewDialog, setViewDialog] = useState(false);
+  const [viewing, setViewing] = useState<any>(null);
+  const [editing, setEditing] = useState<any>(null);
+  const [form, setForm] = useState(emptyForm);
 
-  const filtered = items.filter(o => {
-    const matchSearch = o.numero.toLowerCase().includes(search.toLowerCase()) || o.cliente.toLowerCase().includes(search.toLowerCase());
+  const filtered = (ordens ?? []).filter(o => {
+    const matchSearch =
+      o.numero?.toLowerCase().includes(search.toLowerCase()) ||
+      (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
+  const resetForm = () => { setForm(emptyForm); setEditing(null); };
+
+  const handleSave = () => {
+    if (!form.cliente_id) return;
+    if (editing) {
+      updateOS.mutate({ id: editing.id, ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
+        onSuccess: () => { setDialogOpen(false); resetForm(); },
+      });
+    } else {
+      createOS.mutate({ ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
+        onSuccess: () => { setDialogOpen(false); resetForm(); },
+      });
+    }
+  };
+
+  const handleEdit = (o: any) => {
+    setEditing(o);
+    setForm({
+      cliente_id: o.cliente_id,
+      problema_relatado: o.problema_relatado ?? "",
+      diagnostico: o.diagnostico ?? "",
+      servicos_realizados: o.servicos_realizados ?? "",
+      valor_mao_obra: o.valor_mao_obra ?? 0,
+      valor_pecas: o.valor_pecas ?? 0,
+      status: o.status ?? "aberto",
+      observacoes: o.observacoes ?? "",
+    });
+    setDialogOpen(true);
+  };
+
+  const isSaving = createOS.isPending || updateOS.isPending;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Ordens de Serviço" description="Gerencie todas as ordens de serviço">
-        <Button><Plus className="w-4 h-4 mr-2" />Nova OS</Button>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+          <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Nova OS</Button></DialogTrigger>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>{editing ? "Editar OS" : "Nova Ordem de Serviço"}</DialogTitle></DialogHeader>
+            <div className="grid gap-4 py-2">
+              <div className="grid gap-2">
+                <Label>Cliente *</Label>
+                <Select value={form.cliente_id} onValueChange={v => setForm(f => ({ ...f, cliente_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                  <SelectContent>
+                    {(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2"><Label>Problema Relatado</Label><Textarea value={form.problema_relatado} onChange={e => setForm(f => ({ ...f, problema_relatado: e.target.value }))} /></div>
+              <div className="grid gap-2"><Label>Diagnóstico</Label><Textarea value={form.diagnostico} onChange={e => setForm(f => ({ ...f, diagnostico: e.target.value }))} /></div>
+              <div className="grid gap-2"><Label>Serviços Realizados</Label><Textarea value={form.servicos_realizados} onChange={e => setForm(f => ({ ...f, servicos_realizados: e.target.value }))} /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2"><Label>Mão de Obra (R$)</Label><Input type="number" value={form.valor_mao_obra} onChange={e => setForm(f => ({ ...f, valor_mao_obra: Number(e.target.value) }))} /></div>
+                <div className="grid gap-2"><Label>Peças (R$)</Label><Input type="number" value={form.valor_pecas} onChange={e => setForm(f => ({ ...f, valor_pecas: Number(e.target.value) }))} /></div>
+              </div>
+              <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editing ? "Salvar" : "Criar OS"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
 
       <Card className="glass-card">
@@ -57,69 +144,76 @@ export default function OrdensServico() {
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filtrar status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nº OS</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="hidden md:table-cell">Equipamento</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden sm:table-cell">Valor Total</TableHead>
-                  <TableHead className="hidden lg:table-cell">Técnico</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map(o => (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-medium text-primary">{o.numero}</TableCell>
-                    <TableCell>{o.cliente}</TableCell>
-                    <TableCell className="hidden md:table-cell">{o.equipamento}</TableCell>
-                    <TableCell><StatusBadge status={o.status} /></TableCell>
-                    <TableCell className="hidden sm:table-cell font-medium">R$ {(o.valorMaoObra + o.valorPecas).toFixed(2)}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{o.tecnico}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Dialog>
-                          <DialogTrigger asChild><Button variant="ghost" size="icon" onClick={() => setViewing(o)}><Eye className="w-4 h-4" /></Button></DialogTrigger>
-                          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                            <DialogHeader><DialogTitle>Detalhes da {o.numero}</DialogTitle></DialogHeader>
-                            <div className="grid gap-3 text-sm">
-                              <div className="grid grid-cols-2 gap-3">
-                                <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{o.data}</span></div>
-                                <div><span className="text-muted-foreground">Técnico:</span> <span className="font-medium">{o.tecnico}</span></div>
-                              </div>
-                              <div><span className="text-muted-foreground">Cliente:</span> <span className="font-medium">{o.cliente}</span></div>
-                              <div><span className="text-muted-foreground">Equipamento:</span> <span className="font-medium">{o.equipamento}</span></div>
-                              <div><span className="text-muted-foreground">Problema:</span> <p>{o.problema}</p></div>
-                              <div><span className="text-muted-foreground">Diagnóstico:</span> <p>{o.diagnostico}</p></div>
-                              <div><span className="text-muted-foreground">Serviços:</span> <p>{o.servicos}</p></div>
-                              {o.pecas && <div><span className="text-muted-foreground">Peças:</span> <p>{o.pecas}</p></div>}
-                              <div className="border-t pt-3 grid grid-cols-3 gap-3">
-                                <div><span className="text-muted-foreground text-xs">Mão de obra</span><p className="font-medium">R$ {o.valorMaoObra.toFixed(2)}</p></div>
-                                <div><span className="text-muted-foreground text-xs">Peças</span><p className="font-medium">R$ {o.valorPecas.toFixed(2)}</p></div>
-                                <div><span className="text-muted-foreground text-xs">Total</span><p className="font-bold text-primary">R$ {(o.valorMaoObra + o.valorPecas).toFixed(2)}</p></div>
-                              </div>
-                              <div className="flex items-center gap-2"><span className="text-muted-foreground">Status:</span> <StatusBadge status={o.status} /></div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        <Button variant="ghost" size="icon"><Edit className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => { setItems(prev => prev.filter(i => i.id !== o.id)); toast.success("OS removida!"); }}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                      </div>
-                    </TableCell>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nº OS</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead className="hidden md:table-cell">Problema</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden sm:table-cell">Valor Total</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map(o => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-medium text-primary">{o.numero}</TableCell>
+                      <TableCell>{(o as any).clientes?.nome ?? "—"}</TableCell>
+                      <TableCell className="hidden md:table-cell max-w-[200px] truncate">{o.problema_relatado ?? "—"}</TableCell>
+                      <TableCell><StatusBadge status={statusLabel(o.status)} /></TableCell>
+                      <TableCell className="hidden sm:table-cell font-medium">R$ {(Number(o.valor_mao_obra) + Number(o.valor_pecas)).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => { setViewing(o); setViewDialog(true); }}><Eye className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteOS.mutate(o.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filtered.length === 0 && (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma OS encontrada</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* View Dialog */}
+      <Dialog open={viewDialog} onOpenChange={setViewDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Detalhes da {viewing?.numero}</DialogTitle></DialogHeader>
+          {viewing && (
+            <div className="grid gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div><span className="text-muted-foreground">Data:</span> <span className="font-medium">{new Date(viewing.data_entrada).toLocaleDateString("pt-BR")}</span></div>
+                <div><span className="text-muted-foreground">Status:</span> <StatusBadge status={statusLabel(viewing.status)} /></div>
+              </div>
+              <div><span className="text-muted-foreground">Cliente:</span> <span className="font-medium">{viewing.clientes?.nome}</span></div>
+              {viewing.problema_relatado && <div><span className="text-muted-foreground">Problema:</span> <p>{viewing.problema_relatado}</p></div>}
+              {viewing.diagnostico && <div><span className="text-muted-foreground">Diagnóstico:</span> <p>{viewing.diagnostico}</p></div>}
+              {viewing.servicos_realizados && <div><span className="text-muted-foreground">Serviços:</span> <p>{viewing.servicos_realizados}</p></div>}
+              <div className="border-t pt-3 grid grid-cols-3 gap-3">
+                <div><span className="text-muted-foreground text-xs">Mão de obra</span><p className="font-medium">R$ {Number(viewing.valor_mao_obra).toFixed(2)}</p></div>
+                <div><span className="text-muted-foreground text-xs">Peças</span><p className="font-medium">R$ {Number(viewing.valor_pecas).toFixed(2)}</p></div>
+                <div><span className="text-muted-foreground text-xs">Total</span><p className="font-bold text-primary">R$ {(Number(viewing.valor_mao_obra) + Number(viewing.valor_pecas)).toFixed(2)}</p></div>
+              </div>
+              {viewing.observacoes && <div><span className="text-muted-foreground">Observações:</span> <p>{viewing.observacoes}</p></div>}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
