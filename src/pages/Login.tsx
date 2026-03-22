@@ -3,20 +3,49 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wrench } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [nome, setNome] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast.error("Preencha todos os campos"); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
     toast.success("Login realizado com sucesso!");
-    navigate("/");
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || !nome) { toast.error("Preencha todos os campos"); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { nome }, emailRedirectTo: window.location.origin }
+    });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Conta criada! Verifique seu email.");
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) { toast.error("Digite seu email"); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`
+    });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Email de recuperação enviado!");
   };
 
   return (
@@ -28,24 +57,32 @@ export default function Login() {
           </div>
           <div>
             <CardTitle className="text-xl">Visionyx Sistema</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Acesse sua conta</p>
+            <p className="text-sm text-muted-foreground mt-1">Assistência Técnica</p>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label>Email</Label>
-              <Input type="email" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Senha</Label>
-              <Input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
-            </div>
-            <Button type="submit" className="w-full">Entrar</Button>
-            <Button type="button" variant="link" className="text-xs text-muted-foreground" onClick={() => toast.info("Funcionalidade em desenvolvimento")}>
-              Esqueceu a senha?
-            </Button>
-          </form>
+          <Tabs defaultValue="login">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="login">Entrar</TabsTrigger>
+              <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="grid gap-4">
+                <div className="grid gap-2"><Label>Email</Label><Input type="email" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div className="grid gap-2"><Label>Senha</Label><Input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} /></div>
+                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</Button>
+                <Button type="button" variant="link" className="text-xs text-muted-foreground" onClick={handleResetPassword}>Esqueceu a senha?</Button>
+              </form>
+            </TabsContent>
+            <TabsContent value="signup">
+              <form onSubmit={handleSignUp} className="grid gap-4">
+                <div className="grid gap-2"><Label>Nome</Label><Input placeholder="Seu nome" value={nome} onChange={e => setNome(e.target.value)} /></div>
+                <div className="grid gap-2"><Label>Email</Label><Input type="email" placeholder="seu@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <div className="grid gap-2"><Label>Senha</Label><Input type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={e => setPassword(e.target.value)} /></div>
+                <Button type="submit" className="w-full" disabled={loading}>{loading ? "Criando..." : "Criar Conta"}</Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>

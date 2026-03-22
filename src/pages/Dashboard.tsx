@@ -1,12 +1,24 @@
 import {
   ClipboardList, Clock, CheckCircle, FileText, DollarSign,
-  TrendingUp, TrendingDown, AlertCircle
+  TrendingUp, TrendingDown
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+
+const statusMap: Record<string, string> = {
+  aberto: "Aberto",
+  em_analise: "Em análise",
+  aguardando_aprovacao: "Aguardando aprovação",
+  em_manutencao: "Em manutenção",
+  finalizado: "Finalizado",
+  entregue: "Entregue",
+};
 
 const chartData = [
   { mes: "Jan", receita: 4200, despesa: 2100 },
@@ -17,15 +29,33 @@ const chartData = [
   { mes: "Jun", receita: 5500, despesa: 2600 },
 ];
 
-const recentOrders = [
-  { id: "OS-001", cliente: "João Silva", equipamento: "Notebook Dell", status: "Em manutenção", data: "22/03/2026" },
-  { id: "OS-002", cliente: "Maria Santos", equipamento: "PC Gamer", status: "Aberto", data: "21/03/2026" },
-  { id: "OS-003", cliente: "Carlos Oliveira", equipamento: "Impressora HP", status: "Finalizado", data: "20/03/2026" },
-  { id: "OS-004", cliente: "Ana Costa", equipamento: "Monitor LG", status: "Aguardando aprovação", data: "19/03/2026" },
-  { id: "OS-005", cliente: "Pedro Lima", equipamento: "Notebook Lenovo", status: "Entregue", data: "18/03/2026" },
-];
-
 export default function Dashboard() {
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const [osRes, orcRes, contasRes] = await Promise.all([
+        supabase.from("ordens_servico").select("id, status, valor_mao_obra, valor_pecas, numero, cliente_id, created_at, clientes(nome)").order("created_at", { ascending: false }).limit(10),
+        supabase.from("orcamentos").select("id, status"),
+        supabase.from("contas").select("id, tipo, valor, status"),
+      ]);
+      const os = osRes.data || [];
+      const orc = orcRes.data || [];
+      const contas = contasRes.data || [];
+
+      return {
+        osAbertas: os.filter(o => o.status === "aberto").length,
+        osAndamento: os.filter(o => ["em_analise", "em_manutencao", "aguardando_aprovacao"].includes(o.status)).length,
+        osFinalizadas: os.filter(o => o.status === "finalizado" || o.status === "entregue").length,
+        orcPendentes: orc.filter(o => o.status === "pendente").length,
+        aReceber: contas.filter(c => c.tipo === "receber" && c.status === "pendente").reduce((s, c) => s + Number(c.valor), 0),
+        aPagar: contas.filter(c => c.tipo === "pagar" && c.status === "pendente").reduce((s, c) => s + Number(c.valor), 0),
+        recentOS: os.slice(0, 5),
+      };
+    },
+  });
+
+  if (!stats) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,37 +64,28 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="OS Abertas" value={12} icon={ClipboardList} trend="3 novas hoje" trendUp />
-        <StatCard title="Em Andamento" value={8} icon={Clock} />
-        <StatCard title="Finalizadas (mês)" value={34} icon={CheckCircle} trend="+12% vs mês anterior" trendUp />
-        <StatCard title="Orçamentos Pendentes" value={5} icon={FileText} />
+        <StatCard title="OS Abertas" value={stats.osAbertas} icon={ClipboardList} />
+        <StatCard title="Em Andamento" value={stats.osAndamento} icon={Clock} />
+        <StatCard title="Finalizadas" value={stats.osFinalizadas} icon={CheckCircle} />
+        <StatCard title="Orçamentos Pendentes" value={stats.orcPendentes} icon={FileText} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard title="Faturamento do Mês" value="R$ 7.200" icon={DollarSign} trend="+18%" trendUp />
-        <StatCard title="Contas a Receber" value="R$ 3.450" icon={TrendingUp} />
-        <StatCard title="Contas a Pagar" value="R$ 1.890" icon={TrendingDown} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard title="Faturamento do Mês" value={`R$ ${(stats.aReceber + stats.aPagar).toLocaleString("pt-BR")}`} icon={DollarSign} />
+        <StatCard title="Contas a Receber" value={`R$ ${stats.aReceber.toLocaleString("pt-BR")}`} icon={TrendingUp} />
+        <StatCard title="Contas a Pagar" value={`R$ ${stats.aPagar.toLocaleString("pt-BR")}`} icon={TrendingDown} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="text-base">Financeiro Mensal</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Financeiro Mensal</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                  }}
-                />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
                 <Bar dataKey="receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Receita" />
                 <Bar dataKey="despesa" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Despesa" />
               </BarChart>
@@ -73,26 +94,24 @@ export default function Dashboard() {
         </Card>
 
         <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="text-base">Últimas Ordens de Serviço</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-base">Últimas Ordens de Serviço</CardTitle></CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>OS</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="hidden md:table-cell">Equipamento</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentOrders.map((order) => (
+                {stats.recentOS.length === 0 ? (
+                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">Nenhuma OS registrada</TableCell></TableRow>
+                ) : stats.recentOS.map((order: any) => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium text-primary">{order.id}</TableCell>
-                    <TableCell>{order.cliente}</TableCell>
-                    <TableCell className="hidden md:table-cell">{order.equipamento}</TableCell>
-                    <TableCell><StatusBadge status={order.status} /></TableCell>
+                    <TableCell className="font-medium text-primary">{order.numero}</TableCell>
+                    <TableCell>{(order.clientes as any)?.nome || "—"}</TableCell>
+                    <TableCell><StatusBadge status={statusMap[order.status] || order.status} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
