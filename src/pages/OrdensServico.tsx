@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Eye, Edit, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer } from "lucide-react";
 import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
+import { printOS } from "@/components/PrintOS";
 
 const statusOptions = [
   { value: "aberto", label: "Aberto" },
@@ -25,14 +26,8 @@ const statusOptions = [
 const statusLabel = (val: string) => statusOptions.find(s => s.value === val)?.label ?? val;
 
 const emptyForm = {
-  cliente_id: "",
-  problema_relatado: "",
-  diagnostico: "",
-  servicos_realizados: "",
-  valor_mao_obra: 0,
-  valor_pecas: 0,
-  status: "aberto" as string,
-  observacoes: "",
+  cliente_id: "", problema_relatado: "", diagnostico: "", servicos_realizados: "",
+  valor_mao_obra: 0, valor_pecas: 0, status: "aberto" as string, observacoes: "",
 };
 
 export default function OrdensServico() {
@@ -60,6 +55,15 @@ export default function OrdensServico() {
 
   const resetForm = () => { setForm(emptyForm); setEditing(null); };
 
+  const handlePrint = (o: any) => {
+    printOS({
+      numero: o.numero, data: o.data_entrada, cliente: o.clientes?.nome ?? "—",
+      problema: o.problema_relatado, diagnostico: o.diagnostico,
+      servicos: o.servicos_realizados, valorMaoObra: Number(o.valor_mao_obra),
+      valorPecas: Number(o.valor_pecas), status: statusLabel(o.status), observacoes: o.observacoes,
+    });
+  };
+
   const handleSave = () => {
     if (!form.cliente_id) return;
     if (editing) {
@@ -68,7 +72,19 @@ export default function OrdensServico() {
       });
     } else {
       createOS.mutate({ ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
-        onSuccess: () => { setDialogOpen(false); resetForm(); },
+        onSuccess: (data) => {
+          setDialogOpen(false); resetForm();
+          // After creating, find it in the list and offer print
+          if (data) {
+            const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
+            printOS({
+              numero: data.numero, data: data.data_entrada, cliente: clienteNome,
+              problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
+              servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
+              valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
+            });
+          }
+        },
       });
     }
   };
@@ -76,14 +92,10 @@ export default function OrdensServico() {
   const handleEdit = (o: any) => {
     setEditing(o);
     setForm({
-      cliente_id: o.cliente_id,
-      problema_relatado: o.problema_relatado ?? "",
-      diagnostico: o.diagnostico ?? "",
-      servicos_realizados: o.servicos_realizados ?? "",
-      valor_mao_obra: o.valor_mao_obra ?? 0,
-      valor_pecas: o.valor_pecas ?? 0,
-      status: o.status ?? "aberto",
-      observacoes: o.observacoes ?? "",
+      cliente_id: o.cliente_id, problema_relatado: o.problema_relatado ?? "",
+      diagnostico: o.diagnostico ?? "", servicos_realizados: o.servicos_realizados ?? "",
+      valor_mao_obra: o.valor_mao_obra ?? 0, valor_pecas: o.valor_pecas ?? 0,
+      status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
     });
     setDialogOpen(true);
   };
@@ -102,18 +114,14 @@ export default function OrdensServico() {
                 <Label>Cliente *</Label>
                 <Select value={form.cliente_id} onValueChange={v => setForm(f => ({ ...f, cliente_id: v }))}>
                   <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                  <SelectContent>
-                    {(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2"><Label>Problema Relatado</Label><Textarea value={form.problema_relatado} onChange={e => setForm(f => ({ ...f, problema_relatado: e.target.value }))} /></div>
@@ -126,7 +134,7 @@ export default function OrdensServico() {
               <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editing ? "Salvar" : "Criar OS"}
+                {editing ? "Salvar" : "Criar e Imprimir OS"}
               </Button>
             </div>
           </DialogContent>
@@ -173,6 +181,7 @@ export default function OrdensServico() {
                       <TableCell className="hidden sm:table-cell font-medium">R$ {(Number(o.valor_mao_obra) + Number(o.valor_pecas)).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => { setViewing(o); setViewDialog(true); }}><Eye className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => deleteOS.mutate(o.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
@@ -190,7 +199,6 @@ export default function OrdensServico() {
         </CardContent>
       </Card>
 
-      {/* View Dialog */}
       <Dialog open={viewDialog} onOpenChange={setViewDialog}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Detalhes da {viewing?.numero}</DialogTitle></DialogHeader>
@@ -210,6 +218,9 @@ export default function OrdensServico() {
                 <div><span className="text-muted-foreground text-xs">Total</span><p className="font-bold text-primary">R$ {(Number(viewing.valor_mao_obra) + Number(viewing.valor_pecas)).toFixed(2)}</p></div>
               </div>
               {viewing.observacoes && <div><span className="text-muted-foreground">Observações:</span> <p>{viewing.observacoes}</p></div>}
+              <Button variant="outline" className="mt-2" onClick={() => handlePrint(viewing)}>
+                <Printer className="w-4 h-4 mr-2" />Imprimir OS
+              </Button>
             </div>
           )}
         </DialogContent>
