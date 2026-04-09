@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, ArrowRight } from "lucide-react";
+import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, ArrowRight, CheckCircle } from "lucide-react";
 import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento, useDeleteOrcamento } from "@/hooks/useOrcamentos";
 import { useClientes } from "@/hooks/useClientes";
+import { useCreateConta } from "@/hooks/useContas";
 import { printOrcamento } from "@/components/PrintOS";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ export default function Orcamentos() {
   const createOrc = useCreateOrcamento();
   const updateOrc = useUpdateOrcamento();
   const deleteOrc = useDeleteOrcamento();
+  const createConta = useCreateConta();
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -51,6 +53,24 @@ export default function Orcamentos() {
       numero: o.numero, data: o.created_at, cliente: o.clientes?.nome ?? "—",
       itens: items, valorTotal: Number(o.valor_total), status: statusMap[o.status] ?? o.status,
       observacoes: o.observacoes,
+    });
+  };
+
+  const handleMarcarRecebido = (o: any) => {
+    const valor = Number(o.valor_total);
+    if (valor <= 0) { toast.error("Orçamento sem valor para registrar"); return; }
+    const clienteNome = (o as any).clientes?.nome ?? "Cliente";
+    createConta.mutate({
+      descricao: `${o.numero} - ${clienteNome}`,
+      valor,
+      vencimento: new Date().toISOString().split("T")[0],
+      tipo: "receber",
+      categoria: "Orçamentos",
+      status: "recebido",
+    }, {
+      onSuccess: () => {
+        toast.success(`R$ ${valor.toFixed(2)} registrado no financeiro como recebido!`);
+      },
     });
   };
 
@@ -176,10 +196,12 @@ export default function Orcamentos() {
                       <TableCell><StatusBadge status={statusMap[o.status] ?? o.status} /></TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           {o.status === "aprovado" && (
-                            <Button variant="ghost" size="icon" title="Converter em OS" onClick={() => toast.success("Convertido em OS!")}><ArrowRight className="w-4 h-4 text-success" /></Button>
+                            <Button variant="ghost" size="icon" title="Marcar como Recebido" onClick={() => handleMarcarRecebido(o)}>
+                              <CheckCircle className="w-4 h-4 text-success" />
+                            </Button>
                           )}
+                          <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => deleteOrc.mutate(o.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                         </div>
@@ -203,9 +225,16 @@ export default function Orcamentos() {
             <div className="grid gap-3 text-sm">
               <div><span className="text-muted-foreground">Cliente:</span> <span className="font-medium">{viewing.clientes?.nome}</span></div>
               <div><span className="text-muted-foreground">Status:</span> <StatusBadge status={statusMap[viewing.status] ?? viewing.status} /></div>
-              <Button variant="outline" className="mt-2" onClick={() => handlePrint(viewing)}>
-                <Printer className="w-4 h-4 mr-2" />Imprimir Orçamento
-              </Button>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" onClick={() => handlePrint(viewing)}>
+                  <Printer className="w-4 h-4 mr-2" />Imprimir Orçamento
+                </Button>
+                {viewing.status === "aprovado" && (
+                  <Button onClick={() => { handleMarcarRecebido(viewing); setViewDialog(false); }}>
+                    <CheckCircle className="w-4 h-4 mr-2" />Marcar Recebido
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
