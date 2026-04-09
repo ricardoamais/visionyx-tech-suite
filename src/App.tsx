@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Equipamentos from "./pages/Equipamentos";
@@ -18,7 +19,12 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1 },
+    mutations: { retry: 0 },
+  },
+});
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -44,15 +50,15 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/clientes" element={<Clientes />} />
-              <Route path="/equipamentos" element={<Equipamentos />} />
-              <Route path="/ordens" element={<OrdensServico />} />
-              <Route path="/orcamentos" element={<Orcamentos />} />
-              <Route path="/financeiro" element={<Financeiro />} />
-              <Route path="/estoque" element={<Estoque />} />
-              <Route path="/relatorios" element={<Relatorios />} />
-              <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+              <Route path="/clientes" element={<ErrorBoundary><Clientes /></ErrorBoundary>} />
+              <Route path="/equipamentos" element={<ErrorBoundary><Equipamentos /></ErrorBoundary>} />
+              <Route path="/ordens" element={<ErrorBoundary><OrdensServico /></ErrorBoundary>} />
+              <Route path="/orcamentos" element={<ErrorBoundary><Orcamentos /></ErrorBoundary>} />
+              <Route path="/financeiro" element={<ErrorBoundary><Financeiro /></ErrorBoundary>} />
+              <Route path="/estoque" element={<ErrorBoundary><Estoque /></ErrorBoundary>} />
+              <Route path="/relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
+              <Route path="/configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
