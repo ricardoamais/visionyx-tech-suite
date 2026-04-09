@@ -1,6 +1,30 @@
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 
+interface EmpresaInfo {
+  nome?: string;
+  cnpj?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  endereco?: string | null;
+  whatsapp?: string | null;
+  logo_url?: string | null;
+}
+
+function empresaHeader(e?: EmpresaInfo | null) {
+  if (!e) return "";
+  return `
+    <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #333;padding-bottom:16px">
+      ${e.logo_url ? `<img src="${e.logo_url}" alt="Logo" style="max-height:60px;margin-bottom:8px" />` : ""}
+      <h2 style="margin:0;font-size:18px;font-weight:700">${e.nome || ""}</h2>
+      <p style="margin:2px 0;font-size:12px;color:#555">
+        ${[e.cnpj ? `CNPJ: ${e.cnpj}` : "", e.telefone ? `Tel: ${e.telefone}` : "", e.whatsapp ? `WhatsApp: ${e.whatsapp}` : ""].filter(Boolean).join(" | ")}
+      </p>
+      ${e.endereco ? `<p style="margin:2px 0;font-size:12px;color:#555">${e.endereco}</p>` : ""}
+      ${e.email ? `<p style="margin:2px 0;font-size:12px;color:#555">${e.email}</p>` : ""}
+    </div>`;
+}
+
 interface PrintOSProps {
   numero: string;
   data: string;
@@ -12,6 +36,7 @@ interface PrintOSProps {
   valorPecas: number;
   status: string;
   observacoes?: string;
+  empresa?: EmpresaInfo | null;
 }
 
 export function printOS(d: PrintOSProps) {
@@ -32,6 +57,7 @@ export function printOS(d: PrintOSProps) {
   .sig div{text-align:center;width:200px;border-top:1px solid #333;padding-top:4px;font-size:12px}
   @media print{body{margin:20px}}
 </style></head><body>
+${empresaHeader(d.empresa)}
 <h1>Ordem de Serviço - ${d.numero}</h1>
 <p class="sub">Data: ${new Date(d.data).toLocaleDateString("pt-BR")} | Status: ${d.status}</p>
 <table>
@@ -60,6 +86,7 @@ interface PrintOrcamentoProps {
   valorTotal: number;
   status: string;
   observacoes?: string;
+  empresa?: EmpresaInfo | null;
 }
 
 export function printOrcamento(d: PrintOrcamentoProps) {
@@ -80,6 +107,7 @@ export function printOrcamento(d: PrintOrcamentoProps) {
   .sig div{text-align:center;width:200px;border-top:1px solid #333;padding-top:4px;font-size:12px}
   @media print{body{margin:20px}}
 </style></head><body>
+${empresaHeader(d.empresa)}
 <h1>Orçamento - ${d.numero}</h1>
 <p class="sub">Data: ${new Date(d.data).toLocaleDateString("pt-BR")} | Status: ${d.status} | Cliente: ${d.cliente}</p>
 ${d.observacoes ? `<p style="font-size:13px"><strong>Observações:</strong> ${d.observacoes}</p>` : ""}
