@@ -36,8 +36,8 @@ export function useCreateOS() {
 export function useUpdateOS() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
-      const { data, error } = await supabase.from("ordens_servico").update(input).eq("id", id).select().single();
+    mutationFn: async ({ id, ...input }: { id: string; cliente_id?: string; equipamento_id?: string | null; tecnico_id?: string | null; problema_relatado?: string | null; diagnostico?: string | null; servicos_realizados?: string | null; valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string | null }) => {
+      const { data, error } = await supabase.from("ordens_servico").update(input as any).eq("id", id).select().single();
       if (error) throw error;
       return data;
     },

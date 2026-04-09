@@ -44,7 +44,7 @@ export function useCreateConta() {
 export function useUpdateConta() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...input }: { id: string; descricao?: string; valor?: number; vencimento?: string; tipo?: "pagar" | "receber"; categoria?: string | null; forma_pagamento?: string | null; status?: "pendente" | "pago" | "recebido" | "vencido" }) => {
       const { data, error } = await supabase.from("contas").update(input).eq("id", id).select().single();
       if (error) throw error;
       return data;

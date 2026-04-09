@@ -50,7 +50,7 @@ export function useCreateOrcamento() {
 export function useUpdateOrcamento() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, ...input }: { id: string; cliente_id?: string; observacoes?: string | null; status?: "pendente" | "aprovado" | "reprovado"; valor_total?: number }) => {
       const { data, error } = await supabase.from("orcamentos").update(input).eq("id", id).select().single();
       if (error) throw error;
       return data;
