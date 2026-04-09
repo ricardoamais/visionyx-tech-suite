@@ -36,8 +36,9 @@ export function useUpdateEmpresaConfig() {
         .update(rest)
         .eq("id", id)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Falha ao atualizar dados da empresa");
       return data;
     },
     onSuccess: () => {
