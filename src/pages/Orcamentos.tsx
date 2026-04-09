@@ -28,6 +28,7 @@ export default function Orcamentos() {
   const updateOrc = useUpdateOrcamento();
   const deleteOrc = useDeleteOrcamento();
   const createConta = useCreateConta();
+  const { data: empresa } = useEmpresaConfig();
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
