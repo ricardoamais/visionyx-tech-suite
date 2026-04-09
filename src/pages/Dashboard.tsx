@@ -81,7 +81,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Faturamento do Mês" value={`R$ ${(stats.aReceber + stats.aPagar).toLocaleString("pt-BR")}`} icon={DollarSign} />
+        <StatCard title="Faturamento do Mês" value={`R$ ${stats.faturamentoMes.toLocaleString("pt-BR")}`} icon={DollarSign} />
         <StatCard title="Contas a Receber" value={`R$ ${stats.aReceber.toLocaleString("pt-BR")}`} icon={TrendingUp} />
         <StatCard title="Contas a Pagar" value={`R$ ${stats.aPagar.toLocaleString("pt-BR")}`} icon={TrendingDown} />
       </div>
