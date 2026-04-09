@@ -58,7 +58,7 @@ export default function Orcamentos() {
     if (!form.cliente_id || itens.every(i => !i.descricao)) return;
     const validItens = itens.filter(i => i.descricao.trim());
     if (editing) {
-      updateOrc.mutate({ id: editing.id, ...form, valor_total: valorTotal }, {
+      updateOrc.mutate({ id: editing.id, cliente_id: form.cliente_id, observacoes: form.observacoes, status: form.status as "pendente" | "aprovado" | "reprovado", valor_total: valorTotal }, {
         onSuccess: () => { setDialogOpen(false); resetForm(); },
       });
     } else {
