@@ -13,6 +13,7 @@ import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, CheckCircle } from "
 import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
+import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOS } from "@/components/PrintOS";
 import { toast } from "sonner";
 
@@ -39,6 +40,7 @@ export default function OrdensServico() {
   const updateOS = useUpdateOS();
   const deleteOS = useDeleteOS();
   const createConta = useCreateConta();
+  const { data: empresa } = useEmpresaConfig();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -64,6 +66,7 @@ export default function OrdensServico() {
       problema: o.problema_relatado, diagnostico: o.diagnostico,
       servicos: o.servicos_realizados, valorMaoObra: Number(o.valor_mao_obra),
       valorPecas: Number(o.valor_pecas), status: statusLabel(o.status), observacoes: o.observacoes,
+      empresa,
     });
   };
 
@@ -103,6 +106,7 @@ export default function OrdensServico() {
               problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
               servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
               valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
+              empresa,
             });
           }
         },

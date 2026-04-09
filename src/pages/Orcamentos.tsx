@@ -13,6 +13,7 @@ import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, ArrowRight, CheckCir
 import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento, useDeleteOrcamento } from "@/hooks/useOrcamentos";
 import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
+import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOrcamento } from "@/components/PrintOS";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export default function Orcamentos() {
   const updateOrc = useUpdateOrcamento();
   const deleteOrc = useDeleteOrcamento();
   const createConta = useCreateConta();
+  const { data: empresa } = useEmpresaConfig();
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -52,7 +54,7 @@ export default function Orcamentos() {
     printOrcamento({
       numero: o.numero, data: o.created_at, cliente: o.clientes?.nome ?? "—",
       itens: items, valorTotal: Number(o.valor_total), status: statusMap[o.status] ?? o.status,
-      observacoes: o.observacoes,
+      observacoes: o.observacoes, empresa,
     });
   };
 
@@ -89,7 +91,7 @@ export default function Orcamentos() {
           printOrcamento({
             numero: data.numero, data: data.created_at, cliente: clienteNome,
             itens: validItens, valorTotal, status: statusMap[data.status] ?? data.status,
-            observacoes: data.observacoes ?? undefined,
+            observacoes: data.observacoes ?? undefined, empresa,
           });
           resetForm();
         },

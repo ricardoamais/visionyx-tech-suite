@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,9 +6,33 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
+import { useEmpresaConfig, useUpdateEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { toast } from "sonner";
 
 export default function Configuracoes() {
+  const { data: empresa, isLoading } = useEmpresaConfig();
+  const updateEmpresa = useUpdateEmpresaConfig();
+  const [form, setForm] = useState({ nome: "", cnpj: "", telefone: "", endereco: "", email: "", whatsapp: "" });
+
+  useEffect(() => {
+    if (empresa) {
+      setForm({
+        nome: empresa.nome || "",
+        cnpj: empresa.cnpj || "",
+        telefone: empresa.telefone || "",
+        endereco: empresa.endereco || "",
+        email: empresa.email || "",
+        whatsapp: empresa.whatsapp || "",
+      });
+    }
+  }, [empresa]);
+
+  const handleSave = () => {
+    if (!empresa) return toast.error("Nenhuma empresa cadastrada");
+    updateEmpresa.mutate({ id: empresa.id, ...form });
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Configurações" description="Configure o sistema conforme sua necessidade" />
@@ -16,14 +41,26 @@ export default function Configuracoes() {
         <Card className="glass-card">
           <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
           <CardContent className="grid gap-4">
-            <div className="grid gap-2"><Label>Nome da Empresa</Label><Input defaultValue="Visionyx Assistência Técnica" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2"><Label>CNPJ</Label><Input defaultValue="12.345.678/0001-90" /></div>
-              <div className="grid gap-2"><Label>Telefone</Label><Input defaultValue="(11) 3456-7890" /></div>
-            </div>
-            <div className="grid gap-2"><Label>Endereço</Label><Input defaultValue="Rua da Tecnologia, 123 - São Paulo/SP" /></div>
-            <div className="grid gap-2"><Label>Email</Label><Input defaultValue="contato@visionyx.com.br" /></div>
-            <Button onClick={() => toast.success("Dados salvos!")} className="w-fit">Salvar</Button>
+            {isLoading ? (
+              <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <>
+                <div className="grid gap-2"><Label>Nome da Empresa</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2"><Label>CNPJ</Label><Input value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} /></div>
+                  <div className="grid gap-2"><Label>Telefone</Label><Input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} /></div>
+                </div>
+                <div className="grid gap-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2"><Label>Email</Label><Input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+                  <div className="grid gap-2"><Label>WhatsApp</Label><Input value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: e.target.value }))} /></div>
+                </div>
+                <Button onClick={handleSave} disabled={updateEmpresa.isPending} className="w-fit">
+                  {updateEmpresa.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Salvar
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
