@@ -13,6 +13,7 @@ import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, CheckCircle } from "
 import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
+import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOS } from "@/components/PrintOS";
 import { toast } from "sonner";
 

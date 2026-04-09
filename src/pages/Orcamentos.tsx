@@ -13,6 +13,7 @@ import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, ArrowRight, CheckCir
 import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento, useDeleteOrcamento } from "@/hooks/useOrcamentos";
 import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
+import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOrcamento } from "@/components/PrintOS";
 import { toast } from "sonner";
 
