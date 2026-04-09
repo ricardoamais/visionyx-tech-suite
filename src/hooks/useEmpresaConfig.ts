@@ -1,15 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useEmpresaConfig() {
+  const { empresaId } = useEmpresa();
   return useQuery({
-    queryKey: ["empresa_config"],
+    queryKey: ["empresa_config", empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("empresa_config")
+        .from("empresas")
         .select("*")
-        .limit(1)
+        .eq("id", empresaId!)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -20,6 +23,7 @@ export function useEmpresaConfig() {
 
 export function useUpdateEmpresaConfig() {
   const qc = useQueryClient();
+  const { empresaId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       id: string;
@@ -33,7 +37,7 @@ export function useUpdateEmpresaConfig() {
     }) => {
       const { id, ...rest } = input;
       const { data, error } = await supabase
-        .from("empresa_config")
+        .from("empresas")
         .update(rest)
         .eq("id", id)
         .select("*");

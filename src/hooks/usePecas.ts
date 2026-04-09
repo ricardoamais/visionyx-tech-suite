@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function usePecas() {
@@ -15,9 +16,11 @@ export function usePecas() {
 
 export function useCreatePeca() {
   const qc = useQueryClient();
+  const { empresaId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: { nome: string; quantidade?: number; valor_compra?: number; valor_venda?: number; estoque_minimo?: number }) => {
-      const { data, error } = await supabase.from("pecas").insert(input).select().single();
+      if (!empresaId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("pecas").insert({ ...input, empresa_id: empresaId }).select().single();
       if (error) throw error;
       return data;
     },

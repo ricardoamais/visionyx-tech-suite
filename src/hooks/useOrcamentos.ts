@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useOrcamentos() {
@@ -18,6 +19,7 @@ export function useOrcamentos() {
 
 export function useCreateOrcamento() {
   const qc = useQueryClient();
+  const { empresaId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       cliente_id: string;
@@ -25,11 +27,12 @@ export function useCreateOrcamento() {
       status?: string;
       itens: { descricao: string; quantidade: number; valor_unitario: number }[];
     }) => {
+      if (!empresaId) throw new Error("Empresa não definida");
       const { itens, ...orcData } = input;
       const valor_total = itens.reduce((sum, i) => sum + i.quantidade * i.valor_unitario, 0);
       const { data, error } = await supabase
         .from("orcamentos")
-        .insert({ ...orcData, valor_total } as any)
+        .insert({ ...orcData, valor_total, empresa_id: empresaId } as any)
         .select("*, clientes(nome)")
         .single();
       if (error) throw error;
@@ -37,7 +40,7 @@ export function useCreateOrcamento() {
       if (itens.length > 0) {
         const { error: itensError } = await supabase
           .from("orcamento_itens")
-          .insert(itens.map(i => ({ ...i, orcamento_id: data.id })));
+          .insert(itens.map(i => ({ ...i, orcamento_id: data.id, empresa_id: empresaId })));
         if (itensError) throw itensError;
       }
       return data;

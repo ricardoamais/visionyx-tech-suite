@@ -1,13 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
-
-type ClienteRow = {
-  id: string; nome: string; cpf_cnpj: string | null; telefone: string | null;
-  whatsapp: string | null; email: string | null; endereco: string | null;
-  observacoes: string | null; user_id: string; created_at: string; updated_at: string;
-};
 
 export function useClientes() {
   return useQuery({
@@ -15,7 +10,7 @@ export function useClientes() {
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*").order("nome");
       if (error) throw error;
-      return data as ClienteRow[];
+      return data;
     },
   });
 }
@@ -23,10 +18,12 @@ export function useClientes() {
 export function useCreateCliente() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { empresaId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: { nome: string; cpf_cnpj?: string; telefone?: string; whatsapp?: string; email?: string; endereco?: string; observacoes?: string }) => {
       if (!user) throw new Error("Não autenticado");
-      const { data, error } = await supabase.from("clientes").insert({ ...input, user_id: user.id }).select().single();
+      if (!empresaId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("clientes").insert({ ...input, user_id: user.id, empresa_id: empresaId }).select().single();
       if (error) throw error;
       return data;
     },

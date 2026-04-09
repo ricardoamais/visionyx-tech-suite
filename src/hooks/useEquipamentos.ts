@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useEquipamentos() {
@@ -18,13 +19,15 @@ export function useEquipamentos() {
 
 export function useCreateEquipamento() {
   const qc = useQueryClient();
+  const { empresaId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       tipo: string; marca: string; modelo?: string; numero_serie?: string;
       cliente_id: string; acessorios?: string; defeito_relatado?: string;
       senha_equipamento?: string; observacoes?: string;
     }) => {
-      const { data, error } = await supabase.from("equipamentos").insert(input).select("*, clientes(nome)").single();
+      if (!empresaId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("equipamentos").insert({ ...input, empresa_id: empresaId }).select("*, clientes(nome)").single();
       if (error) throw error;
       return data;
     },

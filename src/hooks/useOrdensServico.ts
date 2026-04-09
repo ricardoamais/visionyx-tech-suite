@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useOrdensServico() {
@@ -18,13 +19,15 @@ export function useOrdensServico() {
 
 export function useCreateOS() {
   const qc = useQueryClient();
+  const { empresaId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       cliente_id: string; equipamento_id?: string; tecnico_id?: string;
       problema_relatado?: string; diagnostico?: string; servicos_realizados?: string;
       valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string;
     }) => {
-      const { data, error } = await supabase.from("ordens_servico").insert(input as any).select().single();
+      if (!empresaId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("ordens_servico").insert({ ...input, empresa_id: empresaId } as any).select().single();
       if (error) throw error;
       return data;
     },
