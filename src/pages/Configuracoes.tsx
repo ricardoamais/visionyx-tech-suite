@@ -11,7 +11,7 @@ import { useEmpresaConfig, useUpdateEmpresaConfig } from "@/hooks/useEmpresaConf
 import { toast } from "sonner";
 
 export default function Configuracoes() {
-  const { data: empresa, isLoading } = useEmpresaConfig();
+  const { data: empresa, isLoading, isError } = useEmpresaConfig();
   const updateEmpresa = useUpdateEmpresaConfig();
   const [form, setForm] = useState({ nome: "", cnpj: "", telefone: "", endereco: "", email: "", whatsapp: "" });
 
@@ -29,7 +29,10 @@ export default function Configuracoes() {
   }, [empresa]);
 
   const handleSave = () => {
-    if (!empresa) return toast.error("Nenhuma empresa cadastrada");
+    if (!empresa) {
+      toast.error("Nenhuma empresa cadastrada");
+      return;
+    }
     updateEmpresa.mutate({ id: empresa.id, ...form });
   };
 
@@ -41,7 +44,7 @@ export default function Configuracoes() {
         <Card className="glass-card">
           <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
           <CardContent className="grid gap-4">
-            {isLoading ? (
+            {isLoading || isError ? (
               <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
             ) : (
               <>

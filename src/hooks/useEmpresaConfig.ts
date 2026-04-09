@@ -14,6 +14,7 @@ export function useEmpresaConfig() {
       if (error) throw error;
       return data;
     },
+    retry: 2,
   });
 }
 
@@ -35,16 +36,15 @@ export function useUpdateEmpresaConfig() {
         .from("empresa_config")
         .update(rest)
         .eq("id", id)
-        .select()
-        .maybeSingle();
+        .select("*");
       if (error) throw error;
-      if (!data) throw new Error("Falha ao atualizar dados da empresa");
-      return data;
+      if (!data || data.length === 0) throw new Error("Falha ao atualizar dados da empresa");
+      return data[0];
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["empresa_config"] });
       toast.success("Dados da empresa salvos!");
     },
-    onError: (e) => toast.error("Erro: " + e.message),
+    onError: (e: Error) => toast.error("Erro: " + e.message),
   });
 }
