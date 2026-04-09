@@ -1,10 +1,12 @@
 import {
   LayoutDashboard, Users, Monitor, ClipboardList, FileText,
-  DollarSign, Package, BarChart3, Settings, LogOut, Wrench
+  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, ShieldCheck
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -30,8 +32,22 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const isActive = (path: string) => location.pathname === path;
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ["is_admin", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      return !!data;
+    },
+  });
 
   return (
     <Sidebar collapsible="icon">
@@ -82,6 +98,16 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/gerenciar")}>
+                    <NavLink to="/gerenciar">
+                      <ShieldCheck className="w-4 h-4" />
+                      {!collapsed && <span>Gerenciar</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
