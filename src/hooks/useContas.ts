@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -22,6 +23,7 @@ export function useContas() {
 
 export function useCreateConta() {
   const qc = useQueryClient();
+  const { empresaId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       descricao: string;
@@ -32,7 +34,8 @@ export function useCreateConta() {
       forma_pagamento?: string;
       status?: ContaStatus;
     }) => {
-      const { data, error } = await supabase.from("contas").insert(input).select().single();
+      if (!empresaId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("contas").insert({ ...input, empresa_id: empresaId }).select().single();
       if (error) throw error;
       return data;
     },
