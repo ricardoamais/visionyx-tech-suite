@@ -33,20 +33,30 @@ export default function Dashboard() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
+      const now = new Date();
+      const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const mesFim = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
       const [osRes, orcRes, contasRes] = await Promise.all([
         supabase.from("ordens_servico").select("id, status, valor_mao_obra, valor_pecas, numero, cliente_id, created_at, clientes(nome)").order("created_at", { ascending: false }).limit(10),
         supabase.from("orcamentos").select("id, status"),
-        supabase.from("contas").select("id, tipo, valor, status"),
+        supabase.from("contas").select("id, tipo, valor, status, created_at"),
       ]);
       const os = osRes.data || [];
       const orc = orcRes.data || [];
       const contas = contasRes.data || [];
+
+      const contasMes = contas.filter(c => c.created_at >= mesInicio && c.created_at <= mesFim);
+      const faturamentoMes = contasMes
+        .filter(c => c.tipo === "receber" && (c.status === "recebido" || c.status === "pago"))
+        .reduce((s, c) => s + Number(c.valor), 0);
 
       return {
         osAbertas: os.filter(o => o.status === "aberto").length,
         osAndamento: os.filter(o => ["em_analise", "em_manutencao", "aguardando_aprovacao"].includes(o.status)).length,
         osFinalizadas: os.filter(o => o.status === "finalizado" || o.status === "entregue").length,
         orcPendentes: orc.filter(o => o.status === "pendente").length,
+        faturamentoMes,
         aReceber: contas.filter(c => c.tipo === "receber" && c.status === "pendente").reduce((s, c) => s + Number(c.valor), 0),
         aPagar: contas.filter(c => c.tipo === "pagar" && c.status === "pendente").reduce((s, c) => s + Number(c.valor), 0),
         recentOS: os.slice(0, 5),
@@ -71,7 +81,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Faturamento do Mês" value={`R$ ${(stats.aReceber + stats.aPagar).toLocaleString("pt-BR")}`} icon={DollarSign} />
+        <StatCard title="Faturamento do Mês" value={`R$ ${stats.faturamentoMes.toLocaleString("pt-BR")}`} icon={DollarSign} />
         <StatCard title="Contas a Receber" value={`R$ ${stats.aReceber.toLocaleString("pt-BR")}`} icon={TrendingUp} />
         <StatCard title="Contas a Pagar" value={`R$ ${stats.aPagar.toLocaleString("pt-BR")}`} icon={TrendingDown} />
       </div>
