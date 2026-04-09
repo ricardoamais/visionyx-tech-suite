@@ -54,7 +54,7 @@ export default function Orcamentos() {
     printOrcamento({
       numero: o.numero, data: o.created_at, cliente: o.clientes?.nome ?? "—",
       itens: items, valorTotal: Number(o.valor_total), status: statusMap[o.status] ?? o.status,
-      observacoes: o.observacoes,
+      observacoes: o.observacoes, empresa,
     });
   };
 
@@ -91,7 +91,7 @@ export default function Orcamentos() {
           printOrcamento({
             numero: data.numero, data: data.created_at, cliente: clienteNome,
             itens: validItens, valorTotal, status: statusMap[data.status] ?? data.status,
-            observacoes: data.observacoes ?? undefined,
+            observacoes: data.observacoes ?? undefined, empresa,
           });
           resetForm();
         },
