@@ -52,16 +52,16 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-              <Route path="/clientes" element={<ErrorBoundary><Clientes /></ErrorBoundary>} />
-              <Route path="/equipamentos" element={<ErrorBoundary><Equipamentos /></ErrorBoundary>} />
-              <Route path="/ordens" element={<ErrorBoundary><OrdensServico /></ErrorBoundary>} />
-              <Route path="/orcamentos" element={<ErrorBoundary><Orcamentos /></ErrorBoundary>} />
-              <Route path="/financeiro" element={<ErrorBoundary><Financeiro /></ErrorBoundary>} />
-              <Route path="/estoque" element={<ErrorBoundary><Estoque /></ErrorBoundary>} />
-              <Route path="/relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
-              <Route path="/configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
-              <Route path="/gerenciar" element={<ErrorBoundary><Gerenciar /></ErrorBoundary>} />
+              <Route path="/" element={<ErrorBoundary key="dashboard"><Dashboard /></ErrorBoundary>} />
+              <Route path="/clientes" element={<ErrorBoundary key="clientes"><Clientes /></ErrorBoundary>} />
+              <Route path="/equipamentos" element={<ErrorBoundary key="equipamentos"><Equipamentos /></ErrorBoundary>} />
+              <Route path="/ordens" element={<ErrorBoundary key="ordens"><OrdensServico /></ErrorBoundary>} />
+              <Route path="/orcamentos" element={<ErrorBoundary key="orcamentos"><Orcamentos /></ErrorBoundary>} />
+              <Route path="/financeiro" element={<ErrorBoundary key="financeiro"><Financeiro /></ErrorBoundary>} />
+              <Route path="/estoque" element={<ErrorBoundary key="estoque"><Estoque /></ErrorBoundary>} />
+              <Route path="/relatorios" element={<ErrorBoundary key="relatorios"><Relatorios /></ErrorBoundary>} />
+              <Route path="/configuracoes" element={<ErrorBoundary key="configuracoes"><Configuracoes /></ErrorBoundary>} />
+              <Route path="/gerenciar" element={<ErrorBoundary key="gerenciar"><Gerenciar /></ErrorBoundary>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
