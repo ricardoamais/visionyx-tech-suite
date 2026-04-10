@@ -29,6 +29,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
+    console.log("[ErrorBoundary] render, hasError:", this.state.hasError);
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
