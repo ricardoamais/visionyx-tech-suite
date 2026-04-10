@@ -1,14 +1,16 @@
 import React, { Component, ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 
 interface Props {
   children: ReactNode;
+  locationKey?: string;
 }
 
 interface State {
   hasError: boolean;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryInner extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -23,13 +25,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidUpdate(prevProps: Props) {
-    if (prevProps.children !== this.props.children) {
+    if (prevProps.locationKey !== this.props.locationKey && this.state.hasError) {
       this.setState({ hasError: false });
     }
   }
 
   render() {
-    console.log("[ErrorBoundary] render, hasError:", this.state.hasError);
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[300px] gap-4">
@@ -45,4 +46,13 @@ export class ErrorBoundary extends Component<Props, State> {
     }
     return this.props.children;
   }
+}
+
+export function ErrorBoundary({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  return (
+    <ErrorBoundaryInner key={location.pathname} locationKey={location.pathname}>
+      {children}
+    </ErrorBoundaryInner>
+  );
 }

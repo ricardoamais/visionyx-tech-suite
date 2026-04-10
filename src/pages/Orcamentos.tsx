@@ -22,7 +22,6 @@ const statusMap: Record<string, string> = { pendente: "Pendente", aprovado: "Apr
 const emptyItem = { descricao: "", quantidade: 1, valor_unitario: 0 };
 
 export default function Orcamentos() {
-  console.log("[Orcamentos] Component rendering");
   const { data: orcamentos, isLoading } = useOrcamentos();
   const { data: clientes } = useClientes();
   const createOrc = useCreateOrcamento();
@@ -30,7 +29,6 @@ export default function Orcamentos() {
   const deleteOrc = useDeleteOrcamento();
   const createConta = useCreateConta();
   const { data: empresa } = useEmpresaConfig();
-  console.log("[Orcamentos] isLoading:", isLoading, "orcamentos:", orcamentos?.length);
 
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
