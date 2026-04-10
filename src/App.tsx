@@ -52,16 +52,16 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-              <Route path="/clientes" element={<ErrorBoundary><Clientes /></ErrorBoundary>} />
-              <Route path="/equipamentos" element={<ErrorBoundary><Equipamentos /></ErrorBoundary>} />
-              <Route path="/ordens" element={<ErrorBoundary><OrdensServico /></ErrorBoundary>} />
-              <Route path="/orcamentos" element={<ErrorBoundary><Orcamentos /></ErrorBoundary>} />
-              <Route path="/financeiro" element={<ErrorBoundary><Financeiro /></ErrorBoundary>} />
-              <Route path="/estoque" element={<ErrorBoundary><Estoque /></ErrorBoundary>} />
-              <Route path="/relatorios" element={<ErrorBoundary><Relatorios /></ErrorBoundary>} />
-              <Route path="/configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
-              <Route path="/gerenciar" element={<ErrorBoundary><Gerenciar /></ErrorBoundary>} />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/clientes" element={<Clientes />} />
+              <Route path="/equipamentos" element={<Equipamentos />} />
+              <Route path="/ordens" element={<OrdensServico />} />
+              <Route path="/orcamentos" element={<Orcamentos />} />
+              <Route path="/financeiro" element={<Financeiro />} />
+              <Route path="/estoque" element={<Estoque />} />
+              <Route path="/relatorios" element={<Relatorios />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/gerenciar" element={<Gerenciar />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
