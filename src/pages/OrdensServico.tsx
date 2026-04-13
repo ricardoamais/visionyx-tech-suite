@@ -39,7 +39,7 @@ export default function OrdensServico() {
   const createOS = useCreateOS();
   const updateOS = useUpdateOS();
   const deleteOS = useDeleteOS();
-  const createConta = useCreateConta();
+  
   const { data: empresa } = useEmpresaConfig();
 
   const [search, setSearch] = useState("");
