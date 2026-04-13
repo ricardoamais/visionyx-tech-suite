@@ -9,10 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, CheckCircle } from "lucide-react";
+import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer } from "lucide-react";
 import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
-import { useCreateConta } from "@/hooks/useContas";
+
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOS } from "@/components/PrintOS";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ export default function OrdensServico() {
   const createOS = useCreateOS();
   const updateOS = useUpdateOS();
   const deleteOS = useDeleteOS();
-  const createConta = useCreateConta();
+  
   const { data: empresa } = useEmpresaConfig();
 
   const [search, setSearch] = useState("");
@@ -70,24 +70,6 @@ export default function OrdensServico() {
     });
   };
 
-  const handleMarcarRecebido = (o: any) => {
-    const valorTotal = Number(o.valor_mao_obra) + Number(o.valor_pecas);
-    if (valorTotal <= 0) { toast.error("OS sem valor para registrar"); return; }
-    const clienteNome = (o as any).clientes?.nome ?? "Cliente";
-    createConta.mutate({
-      descricao: `${o.numero} - ${clienteNome}`,
-      valor: valorTotal,
-      vencimento: new Date().toISOString().split("T")[0],
-      tipo: "receber",
-      categoria: "Serviços",
-      status: "recebido",
-    }, {
-      onSuccess: () => {
-        updateOS.mutate({ id: o.id, status: "entregue" });
-        toast.success(`R$ ${valorTotal.toFixed(2)} registrado no financeiro como recebido!`);
-      },
-    });
-  };
 
   const handleSave = () => {
     if (!form.cliente_id) return;
@@ -206,11 +188,6 @@ export default function OrdensServico() {
                       <TableCell className="hidden sm:table-cell font-medium">R$ {(Number(o.valor_mao_obra) + Number(o.valor_pecas)).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          {(o.status === "finalizado" || o.status === "entregue") && (
-                            <Button variant="ghost" size="icon" title="Marcar como Recebido" onClick={() => handleMarcarRecebido(o)}>
-                              <CheckCircle className="w-4 h-4 text-success" />
-                            </Button>
-                          )}
                           <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => { setViewing(o); setViewDialog(true); }}><Eye className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
@@ -252,11 +229,6 @@ export default function OrdensServico() {
                 <Button variant="outline" onClick={() => handlePrint(viewing)}>
                   <Printer className="w-4 h-4 mr-2" />Imprimir OS
                 </Button>
-                {(viewing.status === "finalizado" || viewing.status === "entregue") && (
-                  <Button onClick={() => { handleMarcarRecebido(viewing); setViewDialog(false); }}>
-                    <CheckCircle className="w-4 h-4 mr-2" />Marcar Recebido
-                  </Button>
-                )}
               </div>
             </div>
           )}
