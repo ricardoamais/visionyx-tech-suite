@@ -1,37 +1,31 @@
 
 
-# Corrigir navegação entre páginas
-
 ## Problema
-O `ErrorBoundary` é um componente de classe que não reseta seu estado quando a rota muda. Como todas as rotas filhas renderizam na mesma posição do `<Outlet />`, o React reutiliza a mesma instância do `ErrorBoundary`, fazendo com que o conteúdo de uma página persista ao navegar para outra.
+
+Algumas abas (Orçamentos, Equipamentos, etc.) abrem em branco no domínio customizado e só aparecem após F5. A causa raiz são erros de renderização não capturados que deixam o `<Outlet />` sem fallback visual — o `ErrorBoundary` foi importado em `App.tsx` mas **nunca é usado para envolver as rotas**. Quando um hook lança erro durante a navegação (ex: race condition com `EmpresaContext` ainda carregando, ou erro de query), a árvore quebra silenciosamente e a tela fica em branco até o reload.
 
 ## Solução
 
-### 1. Adicionar `key` única em cada rota (`App.tsx`)
-Adicionar uma prop `key` baseada no path em cada `<ErrorBoundary>` para forçar o React a criar uma nova instância ao mudar de rota:
+Envolver o conteúdo de cada rota com o `ErrorBoundary` (já existente) dentro do `AppLayout`, garantir que o `EmpresaProvider` mostre um loader enquanto carrega o `empresa_id`, e ativar um Suspense fallback simples. Assim, qualquer falha pontual de uma página exibe a mensagem "Algo deu errado / Recarregar" em vez de tela branca, e o usuário consegue se recuperar sem F5.
 
-```tsx
-<Route path="/ordens" element={<ErrorBoundary key="ordens"><OrdensServico /></ErrorBoundary>} />
-<Route path="/orcamentos" element={<ErrorBoundary key="orcamentos"><Orcamentos /></ErrorBoundary>} />
-// ... mesma coisa para todas as rotas
-```
+## Mudanças
 
-### 2. Melhorar o `ErrorBoundary` (`ErrorBoundary.tsx`)
-Adicionar reset automático quando os children mudam (via `componentDidUpdate`), como camada extra de segurança:
+1. **`src/components/AppLayout.tsx`**
+   - Envolver `<Outlet key={location.pathname} />` com `<ErrorBoundary>`.
+   - Manter o `key` para garantir remontagem limpa entre rotas (já corrige o `removeChild` de portais Radix).
 
-```tsx
-componentDidUpdate(prevProps: Props) {
-  if (prevProps.children !== this.props.children) {
-    this.setState({ hasError: false });
-  }
-}
-```
+2. **`src/contexts/EmpresaContext.tsx`**
+   - Adicionar `retry: 2` e `refetchOnWindowFocus: false` na query do `empresa_usuarios` para evitar falhas transitórias de rede no domínio customizado.
 
-### 3. Remover `vercel.json` desnecessário
-O arquivo `vercel.json` adicionado anteriormente não é necessário no Lovable — o hosting já lida com SPA routing automaticamente.
+3. **`src/App.tsx`**
+   - No `ProtectedRoute`, aguardar também o carregamento do `EmpresaProvider` antes de renderizar páginas que dependem de `empresaId` (evita queries disparadas com `empresaId = null` que retornam vazio e podem quebrar mapeamentos `.map`).
 
-## Arquivos modificados
-- `src/App.tsx` — adicionar keys nas ErrorBoundary
-- `src/components/ErrorBoundary.tsx` — reset automático no componentDidUpdate
-- Remover `vercel.json`
+4. **Hooks de páginas (`useOrcamentos`, `useEquipamentos`, `useOrdensServico`)**
+   - Auditar rapidamente para garantir que `enabled: !!empresaId` está presente em todas as queries que dependem da empresa, evitando execuções prematuras durante a transição de rota.
+
+## Resultado esperado
+
+- Navegar entre Dashboard → Orçamentos → Equipamentos → Ordens funciona sem tela branca.
+- Se ocorrer um erro real, o usuário vê a mensagem do ErrorBoundary com botão "Recarregar" em vez de tela em branco.
+- Funciona igual no preview do Lovable e no domínio customizado.
 
