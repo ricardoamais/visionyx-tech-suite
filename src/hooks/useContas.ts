@@ -8,8 +8,10 @@ type ContaTipo = Database["public"]["Enums"]["conta_tipo"];
 type ContaStatus = Database["public"]["Enums"]["conta_status"];
 
 export function useContas() {
+  const { empresaId } = useEmpresa();
   return useQuery({
-    queryKey: ["contas"],
+    queryKey: ["contas", empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contas")

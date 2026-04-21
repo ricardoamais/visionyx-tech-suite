@@ -4,8 +4,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function usePecas() {
+  const { empresaId } = useEmpresa();
   return useQuery({
-    queryKey: ["pecas"],
+    queryKey: ["pecas", empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const { data, error } = await supabase.from("pecas").select("*").order("nome");
       if (error) throw error;

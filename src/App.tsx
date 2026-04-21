@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { EmpresaProvider } from "@/contexts/EmpresaContext";
+import { EmpresaProvider, useEmpresa } from "@/contexts/EmpresaContext";
 import { AppLayout } from "@/components/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Dashboard from "./pages/Dashboard";
@@ -32,7 +32,13 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   if (!user) return <Navigate to="/login" replace />;
-  return <EmpresaProvider>{children}</EmpresaProvider>;
+  return <EmpresaProvider><EmpresaGate>{children}</EmpresaGate></EmpresaProvider>;
+}
+
+function EmpresaGate({ children }: { children: ReactNode }) {
+  const { loading } = useEmpresa();
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: ReactNode }) {

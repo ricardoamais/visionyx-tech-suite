@@ -10,6 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 
 const statusMap: Record<string, string> = {
   aberto: "Aberto",
@@ -30,8 +31,10 @@ const chartData = [
 ];
 
 export default function Dashboard() {
+  const { empresaId } = useEmpresa();
   const { data: stats } = useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const now = new Date();
       const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
