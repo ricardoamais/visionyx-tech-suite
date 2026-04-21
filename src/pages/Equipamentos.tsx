@@ -70,7 +70,7 @@ export default function Equipamentos() {
   return (
     <div className="space-y-6">
       <PageHeader title="Equipamentos" description="Cadastro de equipamentos dos clientes">
-        <Button onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Novo Equipamento</Button>
+        <Button onClick={() => { resetForm(); refetchClientes(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Novo Equipamento</Button>
       </PageHeader>
 
       <Card className="glass-card">
