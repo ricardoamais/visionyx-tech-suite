@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, Monitor, ClipboardList, FileText,
-  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, ShieldCheck
+  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, ShieldCheck, ShoppingCart
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -22,6 +22,7 @@ const mainItems = [
 ];
 
 const managementItems = [
+  { title: "Caixa / PDV", url: "/caixa", icon: ShoppingCart },
   { title: "Financeiro", url: "/financeiro", icon: DollarSign },
   { title: "Estoque", url: "/estoque", icon: Package },
   { title: "Relatórios", url: "/relatorios", icon: BarChart3 },

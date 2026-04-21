@@ -17,6 +17,7 @@ import Estoque from "./pages/Estoque";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import Gerenciar from "./pages/Gerenciar";
+import Caixa from "./pages/Caixa";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/gerenciar" element={<Gerenciar />} />
+              <Route path="/caixa" element={<Caixa />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
