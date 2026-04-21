@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer } from "lucide-react";
 import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
+import { useServicosCatalogo } from "@/hooks/useServicosCatalogo";
+import { useOSServicos, useAddOSServico, useDeleteOSServico } from "@/hooks/useOSServicos";
+import { Key, X } from "lucide-react";
 
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOS } from "@/components/PrintOS";
