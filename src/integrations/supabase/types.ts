@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      caixas: {
+        Row: {
+          created_at: string
+          data_abertura: string
+          data_fechamento: string | null
+          empresa_id: string
+          id: string
+          observacoes: string | null
+          status: Database["public"]["Enums"]["caixa_status"]
+          updated_at: string
+          user_id: string
+          valor_abertura: number
+          valor_fechamento: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_abertura?: string
+          data_fechamento?: string | null
+          empresa_id: string
+          id?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["caixa_status"]
+          updated_at?: string
+          user_id: string
+          valor_abertura?: number
+          valor_fechamento?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_abertura?: string
+          data_fechamento?: string | null
+          empresa_id?: string
+          id?: string
+          observacoes?: string | null
+          status?: Database["public"]["Enums"]["caixa_status"]
+          updated_at?: string
+          user_id?: string
+          valor_abertura?: number
+          valor_fechamento?: number | null
+        }
+        Relationships: []
+      }
       clientes: {
         Row: {
           cpf_cnpj: string | null
@@ -593,6 +635,99 @@ export type Database = {
         }
         Relationships: []
       }
+      venda_itens: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          peca_id: string
+          quantidade: number
+          valor_unitario: number
+          venda_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          peca_id: string
+          quantidade?: number
+          valor_unitario?: number
+          venda_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          peca_id?: string
+          quantidade?: number
+          valor_unitario?: number
+          venda_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venda_itens_peca_id_fkey"
+            columns: ["peca_id"]
+            isOneToOne: false
+            referencedRelation: "pecas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venda_itens_venda_id_fkey"
+            columns: ["venda_id"]
+            isOneToOne: false
+            referencedRelation: "vendas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendas: {
+        Row: {
+          caixa_id: string
+          cliente_id: string | null
+          created_at: string
+          empresa_id: string
+          forma_pagamento: Database["public"]["Enums"]["venda_pagamento"]
+          id: string
+          observacoes: string | null
+          valor_total: number
+        }
+        Insert: {
+          caixa_id: string
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id: string
+          forma_pagamento: Database["public"]["Enums"]["venda_pagamento"]
+          id?: string
+          observacoes?: string | null
+          valor_total?: number
+        }
+        Update: {
+          caixa_id?: string
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          forma_pagamento?: Database["public"]["Enums"]["venda_pagamento"]
+          id?: string
+          observacoes?: string | null
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendas_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -609,6 +744,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "tecnico"
+      caixa_status: "aberto" | "fechado"
       conta_status: "pendente" | "pago" | "recebido" | "vencido"
       conta_tipo: "pagar" | "receber"
       orcamento_status: "pendente" | "aprovado" | "reprovado"
@@ -619,6 +755,7 @@ export type Database = {
         | "em_manutencao"
         | "finalizado"
         | "entregue"
+      venda_pagamento: "dinheiro" | "cartao_credito" | "cartao_debito" | "pix"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -747,6 +884,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "tecnico"],
+      caixa_status: ["aberto", "fechado"],
       conta_status: ["pendente", "pago", "recebido", "vencido"],
       conta_tipo: ["pagar", "receber"],
       orcamento_status: ["pendente", "aprovado", "reprovado"],
@@ -758,6 +896,7 @@ export const Constants = {
         "finalizado",
         "entregue",
       ],
+      venda_pagamento: ["dinheiro", "cartao_credito", "cartao_debito", "pix"],
     },
   },
 } as const
