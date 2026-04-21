@@ -29,6 +29,7 @@ export default function Caixa() {
   const { data: vendas = [] } = useVendasCaixa(caixaAberto?.id);
   const { data: pecas = [] } = usePecas();
   const { data: clientes = [] } = useClientes();
+  const { data: empresa } = useEmpresaConfig();
   const abrir = useAbrirCaixa();
   const fechar = useFecharCaixa();
   const criarVenda = useCreateVenda();
