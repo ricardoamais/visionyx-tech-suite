@@ -110,7 +110,19 @@ export default function Caixa() {
         observacoes: obsVenda || undefined,
         itens: itensValidos,
       },
-      { onSuccess: () => { setOpenVenda(false); resetVenda(); } }
+      {
+        onSuccess: (venda: any) => {
+          const cliente = clienteId ? clientesValidos.find((c: any) => c.id === clienteId) : null;
+          setOpenVenda(false);
+          resetVenda();
+          // Pergunta se deseja imprimir cupom
+          setTimeout(() => {
+            if (window.confirm("Venda registrada! Deseja imprimir o cupom?")) {
+              imprimirCupom({ empresa, venda, cliente });
+            }
+          }, 100);
+        },
+      }
     );
   }
 
