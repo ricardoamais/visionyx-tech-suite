@@ -181,6 +181,7 @@ export default function Caixa() {
                       <TableHead>Itens</TableHead>
                       <TableHead>Pagamento</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -192,6 +193,19 @@ export default function Caixa() {
                         </TableCell>
                         <TableCell>{pagamentoLabels[v.forma_pagamento]}</TableCell>
                         <TableCell className="text-right font-medium">R$ {Number(v.valor_total).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const cliente = v.cliente_id ? clientesValidos.find((c: any) => c.id === v.cliente_id) : null;
+                              imprimirCupom({ empresa, venda: v, cliente });
+                            }}
+                            title="Imprimir cupom"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
