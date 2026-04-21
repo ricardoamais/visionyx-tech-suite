@@ -44,6 +44,9 @@ export default function OrdensServico() {
   const deleteOS = useDeleteOS();
   
   const { data: empresa } = useEmpresaConfig();
+  const { data: servicosCatalogo } = useServicosCatalogo(true);
+  const addOSServico = useAddOSServico();
+  const removeOSServico = useDeleteOSServico();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -52,6 +55,8 @@ export default function OrdensServico() {
   const [viewing, setViewing] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [servicoSel, setServicoSel] = useState<string>("");
+  const { data: osServicos } = useOSServicos(editing?.id);
 
   const filtered = (ordens ?? []).filter(o => {
     const matchSearch =
