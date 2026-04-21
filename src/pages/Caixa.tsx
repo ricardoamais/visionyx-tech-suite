@@ -9,10 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart } from "lucide-react";
+import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer } from "lucide-react";
 import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useVendasCaixa, useCreateVenda } from "@/hooks/useCaixa";
 import { usePecas } from "@/hooks/usePecas";
 import { useClientes } from "@/hooks/useClientes";
+import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
+import { imprimirCupom } from "@/components/CupomVenda";
 import { format } from "date-fns";
 
 const pagamentoLabels: Record<string, string> = {
