@@ -546,6 +546,61 @@ export type Database = {
           },
         ]
       }
+      os_servicos: {
+        Row: {
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          ordem_servico_id: string
+          quantidade: number
+          servico_catalogo_id: string | null
+          valor_unitario: number
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          ordem_servico_id: string
+          quantidade?: number
+          servico_catalogo_id?: string | null
+          valor_unitario?: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          ordem_servico_id?: string
+          quantidade?: number
+          servico_catalogo_id?: string | null
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_servicos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_servicos_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_servicos_servico_catalogo_id_fkey"
+            columns: ["servico_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "servicos_catalogo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pecas: {
         Row: {
           created_at: string
@@ -616,6 +671,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      servicos_catalogo: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          created_at: string
+          descricao: string | null
+          empresa_id: string
+          id: string
+          nome: string
+          updated_at: string
+          valor_padrao: number
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          descricao?: string | null
+          empresa_id: string
+          id?: string
+          nome: string
+          updated_at?: string
+          valor_padrao?: number
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          created_at?: string
+          descricao?: string | null
+          empresa_id?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          valor_padrao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "servicos_catalogo_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
