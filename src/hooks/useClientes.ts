@@ -12,7 +12,8 @@ export function useClientes() {
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*").order("nome");
       if (error) throw error;
-      return data;
+      console.log("[useClientes] loaded:", data?.length, "clientes");
+      return (data ?? []).filter(c => c?.id);
     },
   });
 }
