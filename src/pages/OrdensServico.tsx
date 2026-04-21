@@ -35,7 +35,7 @@ const emptyForm = {
 
 export default function OrdensServico() {
   const { data: ordens, isLoading } = useOrdensServico();
-  const { data: clientes } = useClientes();
+  const { data: clientes, refetch: refetchClientes } = useClientes();
   const createOS = useCreateOS();
   const updateOS = useUpdateOS();
   const deleteOS = useDeleteOS();
@@ -112,7 +112,7 @@ export default function OrdensServico() {
   return (
     <div className="space-y-6">
       <PageHeader title="Ordens de Serviço" description="Gerencie todas as ordens de serviço">
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (o) refetchClientes(); else resetForm(); }}>
           <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Nova OS</Button></DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar OS" : "Nova Ordem de Serviço"}</DialogTitle></DialogHeader>

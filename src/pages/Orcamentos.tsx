@@ -23,7 +23,7 @@ const emptyItem = { descricao: "", quantidade: 1, valor_unitario: 0 };
 
 export default function Orcamentos() {
   const { data: orcamentos, isLoading } = useOrcamentos();
-  const { data: clientes } = useClientes();
+  const { data: clientes, refetch: refetchClientes } = useClientes();
   const createOrc = useCreateOrcamento();
   const updateOrc = useUpdateOrcamento();
   const deleteOrc = useDeleteOrcamento();
@@ -111,7 +111,7 @@ export default function Orcamentos() {
   return (
     <div className="space-y-6">
       <PageHeader title="Orçamentos" description="Gerencie orçamentos para clientes">
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (o) refetchClientes(); else resetForm(); }}>
           <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Novo Orçamento</Button></DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar Orçamento" : "Novo Orçamento"}</DialogTitle></DialogHeader>
