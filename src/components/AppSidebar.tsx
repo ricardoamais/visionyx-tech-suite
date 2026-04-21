@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, Monitor, ClipboardList, FileText,
-  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, ShieldCheck, ShoppingCart, Key
+  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, ShieldCheck, ShoppingCart
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -17,7 +17,6 @@ const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Equipamentos", url: "/equipamentos", icon: Monitor },
-  { title: "Serviços", url: "/servicos", icon: Key },
   { title: "Ordens de Serviço", url: "/ordens", icon: ClipboardList },
   { title: "Orçamentos", url: "/orcamentos", icon: FileText },
 ];
