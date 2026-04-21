@@ -9,10 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart } from "lucide-react";
+import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer } from "lucide-react";
 import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useVendasCaixa, useCreateVenda } from "@/hooks/useCaixa";
 import { usePecas } from "@/hooks/usePecas";
 import { useClientes } from "@/hooks/useClientes";
+import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
+import { imprimirCupom } from "@/components/CupomVenda";
 import { format } from "date-fns";
 
 const pagamentoLabels: Record<string, string> = {
@@ -27,6 +29,7 @@ export default function Caixa() {
   const { data: vendas = [] } = useVendasCaixa(caixaAberto?.id);
   const { data: pecas = [] } = usePecas();
   const { data: clientes = [] } = useClientes();
+  const { data: empresa } = useEmpresaConfig();
   const abrir = useAbrirCaixa();
   const fechar = useFecharCaixa();
   const criarVenda = useCreateVenda();
@@ -107,7 +110,19 @@ export default function Caixa() {
         observacoes: obsVenda || undefined,
         itens: itensValidos,
       },
-      { onSuccess: () => { setOpenVenda(false); resetVenda(); } }
+      {
+        onSuccess: (venda: any) => {
+          const cliente = clienteId ? clientesValidos.find((c: any) => c.id === clienteId) : null;
+          setOpenVenda(false);
+          resetVenda();
+          // Pergunta se deseja imprimir cupom
+          setTimeout(() => {
+            if (window.confirm("Venda registrada! Deseja imprimir o cupom?")) {
+              imprimirCupom({ empresa, venda, cliente });
+            }
+          }, 100);
+        },
+      }
     );
   }
 
@@ -166,6 +181,7 @@ export default function Caixa() {
                       <TableHead>Itens</TableHead>
                       <TableHead>Pagamento</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -177,6 +193,19 @@ export default function Caixa() {
                         </TableCell>
                         <TableCell>{pagamentoLabels[v.forma_pagamento]}</TableCell>
                         <TableCell className="text-right font-medium">R$ {Number(v.valor_total).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const cliente = v.cliente_id ? clientesValidos.find((c: any) => c.id === v.cliente_id) : null;
+                              imprimirCupom({ empresa, venda: v, cliente });
+                            }}
+                            title="Imprimir cupom"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

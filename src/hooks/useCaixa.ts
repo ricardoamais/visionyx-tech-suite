@@ -149,7 +149,12 @@ export function useCreateVenda() {
         }))
       );
       if (e2) throw e2;
-      return venda;
+      // Buscar itens com nome da peça para impressão
+      const { data: itensFull } = await supabase
+        .from("venda_itens")
+        .select("*, pecas(nome)")
+        .eq("venda_id", venda.id);
+      return { ...venda, venda_itens: itensFull ?? [] };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vendas_caixa"] });
