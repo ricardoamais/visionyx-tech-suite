@@ -1,56 +1,30 @@
 
 
-## Diagnóstico
+## Problema
 
-O domínio `app.visionyx.com.br` está no Vercel servindo uma versão antiga do app — todas as correções recentes (refetch de clientes, EmpresaGate, enabled nas queries) estão no código do Lovable mas **não estão chegando à produção do Vercel**. No preview Lovable funciona; no domínio Vercel trava.
+No domínio Vercel, ao abrir "Nova OS" e clicar no select de Cliente, a tela trava. Isso indica que o `<Select>` do Radix dentro do `<Dialog>` está com conflito de foco/portal, OU a lista de clientes está vazia/quebrada quando renderizada.
 
-Causas prováveis (em ordem):
-1. **Deploy do Vercel não conectado ao branch correto** — commits do Lovable vão pro GitHub mas o Vercel está observando outro branch ou está pausado.
-2. **`vercel.json` com rewrite frágil** — `"destination": "/"` pode causar comportamento estranho em rotas; o padrão correto para SPA é `"/index.html"`.
-3. **Cache agressivo do Vercel/CDN** servindo bundle antigo.
+## Causa provável
 
-## O que vou fazer
+1. **Conflito Radix Dialog + Select**: o `Select` abre um portal por cima do `Dialog`, e em produção (sem React DevMode) qualquer item com `value=""` ou `id` undefined quebra o componente — Radix Select **não aceita `SelectItem` com value vazio**.
+2. Se algum cliente vier sem `id` ou com `id` null, o `.map` gera `<SelectItem value={undefined}>` e trava.
 
-### 1. Corrigir `vercel.json` para SPA padrão
-Trocar destino do rewrite para `/index.html` (padrão recomendado Vite + Vercel) e adicionar headers anti-cache no `index.html`:
+## Correção
 
-```json
-{
-  "rewrites": [
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
-  ],
-  "headers": [
-    {
-      "source": "/index.html",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
-      ]
-    }
-  ]
-}
-```
+### 1. `src/pages/OrdensServico.tsx` e `src/pages/Orcamentos.tsx`
+- Filtrar clientes inválidos antes do `.map`: `(clientes ?? []).filter(c => c?.id)`
+- Garantir fallback quando lista vazia: mostrar `<SelectItem disabled>Nenhum cliente cadastrado</SelectItem>`
+- Trocar `Select` controlado para usar `value={form.cliente_id || undefined}` (Radix exige undefined, não string vazia)
 
-Isso garante que toda rota (`/ordens`, `/orcamentos`, etc) entrega o `index.html` mais recente, e que o navegador nunca cacheia o HTML — só os assets versionados de `/assets/`.
+### 2. `src/pages/Equipamentos.tsx`
+- Mesma proteção no select de cliente.
 
-### 2. Forçar bump no bundle
-Adicionar um pequeno comentário de versão em `src/main.tsx` para garantir que o Vercel detecta mudança e gera novo build com hash diferente.
+### 3. Diagnóstico extra
+- Adicionar `console.log` temporário em `useClientes` para confirmar no domínio publicado se a lista chega corretamente.
 
-### 3. Instruções para você (o que precisa fazer manualmente, pois Lovable não controla o Vercel)
+## Resultado
 
-Depois que eu fizer commit das mudanças acima, verifique no painel do Vercel:
-
-- **Settings → Git**: confirme que o repositório do GitHub está conectado e o branch é `main` (ou o que o Lovable usa).
-- **Deployments**: confirme que apareceu um novo deploy depois do meu commit. Se ficou em "Queued" ou "Failed", clique em **Redeploy** sem cache.
-- **Settings → Domains**: confirme que `app.visionyx.com.br` está apontando para o projeto correto e não para outro projeto antigo.
-- Após deploy, abra `app.visionyx.com.br` em **aba anônima** (Ctrl+Shift+N) para garantir que não é cache do navegador.
-
-### 4. Verificação
-Após você confirmar que o Vercel terminou o deploy novo, eu posso (se autorizar) abrir o navegador no domínio publicado e validar que o select de clientes funciona.
-
-## Resultado esperado
-
-- Vercel passa a servir sempre a versão mais recente do código.
-- Rotas (`/ordens`, `/orcamentos` etc) abrem direto sem 404.
-- Navegador não cacheia HTML antigo, só assets imutáveis.
-- Select de cliente em "Nova OS" no domínio publicado funciona igual ao preview.
+- Select de cliente abre sem travar no domínio Vercel.
+- Listas vazias mostram mensagem amigável em vez de quebrar.
+- Funciona igual ao preview Lovable.
 
