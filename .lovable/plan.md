@@ -1,30 +1,28 @@
 
 
-## Problema
+## Vincular Caixa/PDV ao Financeiro e Relatórios
 
-No domínio Vercel, ao abrir "Nova OS" e clicar no select de Cliente, a tela trava. Isso indica que o `<Select>` do Radix dentro do `<Dialog>` está com conflito de foco/portal, OU a lista de clientes está vazia/quebrada quando renderizada.
+Toda venda do PDV deve gerar uma entrada automática em `contas` (tipo=receber, status=recebido) para somar nos relatórios e no financeiro. Isso é feito por trigger no banco — não precisa mudar o frontend.
 
-## Causa provável
+## Mudanças
 
-1. **Conflito Radix Dialog + Select**: o `Select` abre um portal por cima do `Dialog`, e em produção (sem React DevMode) qualquer item com `value=""` ou `id` undefined quebra o componente — Radix Select **não aceita `SelectItem` com value vazio**.
-2. Se algum cliente vier sem `id` ou com `id` null, o `.map` gera `<SelectItem value={undefined}>` e trava.
+### 1. Trigger no banco (única alteração necessária)
+Criar função `auto_create_conta_venda()` + trigger AFTER INSERT em `vendas`:
+- Insere registro em `contas` com:
+  - `tipo = 'receber'`
+  - `status = 'recebido'` (venda PDV é à vista)
+  - `vencimento = CURRENT_DATE`
+  - `categoria = 'PDV'`
+  - `forma_pagamento = <forma da venda>`
+  - `descricao = 'Venda PDV - <data/hora>'`
+  - `valor = valor_total`
+  - `empresa_id = empresa_id da venda`
 
-## Correção
+### 2. Resultado
+- Página **Financeiro** → vendas aparecem automaticamente em "Contas a Receber" como recebidas, somando em "Total Recebido" e no gráfico de fluxo de caixa.
+- Página **Relatórios** → como já lê de `contas`, vendas entram nas métricas de faturamento.
+- **Fechamento de caixa** não precisa lançar nada extra — todas as vendas já estão lançadas individualmente; o fechamento é apenas conferência de dinheiro físico.
 
-### 1. `src/pages/OrdensServico.tsx` e `src/pages/Orcamentos.tsx`
-- Filtrar clientes inválidos antes do `.map`: `(clientes ?? []).filter(c => c?.id)`
-- Garantir fallback quando lista vazia: mostrar `<SelectItem disabled>Nenhum cliente cadastrado</SelectItem>`
-- Trocar `Select` controlado para usar `value={form.cliente_id || undefined}` (Radix exige undefined, não string vazia)
-
-### 2. `src/pages/Equipamentos.tsx`
-- Mesma proteção no select de cliente.
-
-### 3. Diagnóstico extra
-- Adicionar `console.log` temporário em `useClientes` para confirmar no domínio publicado se a lista chega corretamente.
-
-## Resultado
-
-- Select de cliente abre sem travar no domínio Vercel.
-- Listas vazias mostram mensagem amigável em vez de quebrar.
-- Funciona igual ao preview Lovable.
+### 3. Sem mudanças no frontend
+Tudo já funciona via trigger. Nada do que existe é alterado.
 
