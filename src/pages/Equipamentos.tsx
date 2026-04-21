@@ -16,7 +16,7 @@ const tipos = ["Notebook", "PC Desktop", "Impressora", "Monitor", "Tablet", "Cel
 
 export default function Equipamentos() {
   const { data: equipamentos = [], isLoading } = useEquipamentos();
-  const { data: clientes = [] } = useClientes();
+  const { data: clientes = [], refetch: refetchClientes } = useClientes();
   const createEquip = useCreateEquipamento();
   const updateEquip = useUpdateEquipamento();
   const deleteEquip = useDeleteEquipamento();
@@ -70,7 +70,7 @@ export default function Equipamentos() {
   return (
     <div className="space-y-6">
       <PageHeader title="Equipamentos" description="Cadastro de equipamentos dos clientes">
-        <Button onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Novo Equipamento</Button>
+        <Button onClick={() => { resetForm(); refetchClientes(); setDialogOpen(true); }}><Plus className="w-4 h-4 mr-2" />Novo Equipamento</Button>
       </PageHeader>
 
       <Card className="glass-card">
@@ -115,7 +115,7 @@ export default function Equipamentos() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (o) refetchClientes(); else resetForm(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Editar" : "Novo"} Equipamento</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
