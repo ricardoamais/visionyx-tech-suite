@@ -4,8 +4,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useOrcamentos() {
+  const { empresaId } = useEmpresa();
   return useQuery({
-    queryKey: ["orcamentos"],
+    queryKey: ["orcamentos", empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orcamentos")

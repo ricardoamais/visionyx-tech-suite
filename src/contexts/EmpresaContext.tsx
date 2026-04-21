@@ -29,6 +29,9 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
       return data?.empresa_id ?? null;
     },
     staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    retry: 2,
+    refetchOnWindowFocus: false,
   });
 
   return (
