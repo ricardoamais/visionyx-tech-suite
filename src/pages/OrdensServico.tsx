@@ -148,6 +148,62 @@ export default function OrdensServico() {
               <div className="grid gap-2"><Label>Problema Relatado</Label><Textarea value={form.problema_relatado} onChange={e => setForm(f => ({ ...f, problema_relatado: e.target.value }))} /></div>
               <div className="grid gap-2"><Label>Diagnóstico</Label><Textarea value={form.diagnostico} onChange={e => setForm(f => ({ ...f, diagnostico: e.target.value }))} /></div>
               <div className="grid gap-2"><Label>Serviços Realizados</Label><Textarea value={form.servicos_realizados} onChange={e => setForm(f => ({ ...f, servicos_realizados: e.target.value }))} /></div>
+              {editing && (
+                <div className="grid gap-2 border rounded-md p-3 bg-muted/30">
+                  <Label className="flex items-center gap-2"><Key className="w-4 h-4" />Serviços de Chaveiro</Label>
+                  <p className="text-xs text-muted-foreground">Itens vinculados recalculam o valor de mão de obra automaticamente.</p>
+                  <div className="flex gap-2">
+                    <Select value={servicoSel || undefined} onValueChange={setServicoSel}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione um serviço do catálogo" /></SelectTrigger>
+                      <SelectContent>
+                        {(servicosCatalogo ?? []).length === 0 ? (
+                          <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum serviço cadastrado</div>
+                        ) : (
+                          (servicosCatalogo ?? []).map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.nome} — R$ {Number(s.valor_padrao).toFixed(2)}</SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={!servicoSel || addOSServico.isPending}
+                      onClick={() => {
+                        const s = (servicosCatalogo ?? []).find(x => x.id === servicoSel);
+                        if (!s || !editing) return;
+                        addOSServico.mutate({
+                          ordem_servico_id: editing.id,
+                          servico_catalogo_id: s.id,
+                          descricao: s.nome,
+                          quantidade: 1,
+                          valor_unitario: Number(s.valor_padrao),
+                        }, { onSuccess: () => setServicoSel("") });
+                      }}
+                    >Adicionar</Button>
+                  </div>
+                  <div className="grid gap-1">
+                    {(osServicos ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">Nenhum serviço vinculado.</p>
+                    ) : (
+                      (osServicos ?? []).map(item => (
+                        <div key={item.id} className="flex items-center justify-between text-sm bg-background rounded px-2 py-1.5 border">
+                          <div className="flex-1 truncate">{item.descricao}</div>
+                          <div className="text-muted-foreground text-xs mx-2">{item.quantidade}× R$ {Number(item.valor_unitario).toFixed(2)}</div>
+                          <div className="font-medium mr-2">R$ {(item.quantidade * Number(item.valor_unitario)).toFixed(2)}</div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => removeOSServico.mutate({ id: item.id, ordem_servico_id: editing.id })}
+                          ><X className="w-3.5 h-3.5" /></Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2"><Label>Mão de Obra (R$)</Label><Input type="number" value={form.valor_mao_obra} onChange={e => setForm(f => ({ ...f, valor_mao_obra: Number(e.target.value) }))} /></div>
                 <div className="grid gap-2"><Label>Peças (R$)</Label><Input type="number" value={form.valor_pecas} onChange={e => setForm(f => ({ ...f, valor_pecas: Number(e.target.value) }))} /></div>
