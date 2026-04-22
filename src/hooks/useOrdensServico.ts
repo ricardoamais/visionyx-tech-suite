@@ -26,7 +26,7 @@ export function useCreateOS() {
     mutationFn: async (input: {
       cliente_id: string; equipamento_id?: string; tecnico_id?: string;
       problema_relatado?: string; diagnostico?: string; servicos_realizados?: string;
-      valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string;
+      valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string; foto_url?: string | null;
     }) => {
       if (!empresaId) throw new Error("Empresa não definida");
       const { data, error } = await supabase.from("ordens_servico").insert({ ...input, empresa_id: empresaId } as any).select().single();
@@ -41,7 +41,7 @@ export function useCreateOS() {
 export function useUpdateOS() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; cliente_id?: string; equipamento_id?: string | null; tecnico_id?: string | null; problema_relatado?: string | null; diagnostico?: string | null; servicos_realizados?: string | null; valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string | null }) => {
+    mutationFn: async ({ id, ...input }: { id: string; cliente_id?: string; equipamento_id?: string | null; tecnico_id?: string | null; problema_relatado?: string | null; diagnostico?: string | null; servicos_realizados?: string | null; valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string | null; foto_url?: string | null }) => {
       const { data, error } = await supabase.from("ordens_servico").update(input as any).eq("id", id).select().single();
       if (error) throw error;
       return data;

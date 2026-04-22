@@ -16,6 +16,7 @@ import { useClientes } from "@/hooks/useClientes";
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOS } from "@/components/PrintOS";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const statusOptions = [
   { value: "aberto", label: "Aberto" },
@@ -31,6 +32,7 @@ const statusLabel = (val: string) => statusOptions.find(s => s.value === val)?.l
 const emptyForm = {
   cliente_id: "", problema_relatado: "", diagnostico: "", servicos_realizados: "",
   valor_mao_obra: 0, valor_pecas: 0, status: "aberto" as string, observacoes: "",
+  foto_url: "" as string,
 };
 
 export default function OrdensServico() {
@@ -49,6 +51,7 @@ export default function OrdensServico() {
   const [viewing, setViewing] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
+  const [uploading, setUploading] = useState(false);
 
   const filtered = (ordens ?? []).filter(o => {
     const matchSearch =
@@ -66,8 +69,25 @@ export default function OrdensServico() {
       problema: o.problema_relatado, diagnostico: o.diagnostico,
       servicos: o.servicos_realizados, valorMaoObra: Number(o.valor_mao_obra),
       valorPecas: Number(o.valor_pecas), status: statusLabel(o.status), observacoes: o.observacoes,
-      empresa,
+      empresa, fotoUrl: o.foto_url,
     });
+  };
+
+  const handleUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from("os-fotos").upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data } = supabase.storage.from("os-fotos").getPublicUrl(path);
+      setForm(f => ({ ...f, foto_url: data.publicUrl }));
+      toast.success("Foto enviada!");
+    } catch (e: any) {
+      toast.error("Erro ao enviar foto: " + e.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
 
@@ -88,7 +108,7 @@ export default function OrdensServico() {
               problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
               servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
               valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
-              empresa,
+              empresa, fotoUrl: (data as any).foto_url,
             });
           }
         },
@@ -103,6 +123,7 @@ export default function OrdensServico() {
       diagnostico: o.diagnostico ?? "", servicos_realizados: o.servicos_realizados ?? "",
       valor_mao_obra: o.valor_mao_obra ?? 0, valor_pecas: o.valor_pecas ?? 0,
       status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
+      foto_url: o.foto_url ?? "",
     });
     setDialogOpen(true);
   };
@@ -145,6 +166,17 @@ export default function OrdensServico() {
                 <div className="grid gap-2"><Label>Peças (R$)</Label><Input type="number" value={form.valor_pecas} onChange={e => setForm(f => ({ ...f, valor_pecas: Number(e.target.value) }))} /></div>
               </div>
               <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
+              <div className="grid gap-2">
+                <Label>Foto Anexa (sai na impressão)</Label>
+                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+                {uploading && <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Enviando...</p>}
+                {form.foto_url && (
+                  <div className="relative">
+                    <img src={form.foto_url} alt="Foto OS" className="max-h-40 rounded border" />
+                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm(f => ({ ...f, foto_url: "" }))}>Remover foto</Button>
+                  </div>
+                )}
+              </div>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editing ? "Salvar" : "Criar e Imprimir OS"}
@@ -231,6 +263,12 @@ export default function OrdensServico() {
                 <div><span className="text-muted-foreground text-xs">Total</span><p className="font-bold text-primary">R$ {(Number(viewing.valor_mao_obra) + Number(viewing.valor_pecas)).toFixed(2)}</p></div>
               </div>
               {viewing.observacoes && <div><span className="text-muted-foreground">Observações:</span> <p>{viewing.observacoes}</p></div>}
+              {viewing.foto_url && (
+                <div>
+                  <span className="text-muted-foreground">Foto Anexa:</span>
+                  <img src={viewing.foto_url} alt="Foto OS" className="mt-2 max-h-60 rounded border" />
+                </div>
+              )}
               <div className="flex gap-2 mt-2">
                 <Button variant="outline" onClick={() => handlePrint(viewing)}>
                   <Printer className="w-4 h-4 mr-2" />Imprimir OS

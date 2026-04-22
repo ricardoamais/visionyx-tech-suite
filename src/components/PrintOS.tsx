@@ -37,6 +37,7 @@ interface PrintOSProps {
   status: string;
   observacoes?: string;
   empresa?: EmpresaInfo | null;
+  fotoUrl?: string | null;
 }
 
 export function printOS(d: PrintOSProps) {
@@ -72,6 +73,7 @@ ${empresaHeader(d.empresa)}
   <tr><td>R$ ${d.valorMaoObra.toFixed(2)}</td><td>R$ ${d.valorPecas.toFixed(2)}</td><td class="total">R$ ${total.toFixed(2)}</td></tr>
 </table>
 <div class="sig"><div>Técnico</div><div>Cliente</div></div>
+${d.fotoUrl ? `<div style="margin-top:24px;page-break-inside:avoid"><div class="section-title">Foto Anexa</div><img src="${d.fotoUrl}" alt="Foto" style="max-width:100%;max-height:400px;border:1px solid #ddd;border-radius:4px" /></div>` : ""}
 <div class="footer">Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
 </body></html>`;
   const win = window.open("", "_blank");
