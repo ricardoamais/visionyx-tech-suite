@@ -263,6 +263,12 @@ export default function OrdensServico() {
                 <div><span className="text-muted-foreground text-xs">Total</span><p className="font-bold text-primary">R$ {(Number(viewing.valor_mao_obra) + Number(viewing.valor_pecas)).toFixed(2)}</p></div>
               </div>
               {viewing.observacoes && <div><span className="text-muted-foreground">Observações:</span> <p>{viewing.observacoes}</p></div>}
+              {viewing.foto_url && (
+                <div>
+                  <span className="text-muted-foreground">Foto Anexa:</span>
+                  <img src={viewing.foto_url} alt="Foto OS" className="mt-2 max-h-60 rounded border" />
+                </div>
+              )}
               <div className="flex gap-2 mt-2">
                 <Button variant="outline" onClick={() => handlePrint(viewing)}>
                   <Printer className="w-4 h-4 mr-2" />Imprimir OS
