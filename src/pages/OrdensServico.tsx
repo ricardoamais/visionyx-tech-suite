@@ -166,6 +166,17 @@ export default function OrdensServico() {
                 <div className="grid gap-2"><Label>Peças (R$)</Label><Input type="number" value={form.valor_pecas} onChange={e => setForm(f => ({ ...f, valor_pecas: Number(e.target.value) }))} /></div>
               </div>
               <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
+              <div className="grid gap-2">
+                <Label>Foto Anexa (sai na impressão)</Label>
+                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+                {uploading && <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Enviando...</p>}
+                {form.foto_url && (
+                  <div className="relative">
+                    <img src={form.foto_url} alt="Foto OS" className="max-h-40 rounded border" />
+                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm(f => ({ ...f, foto_url: "" }))}>Remover foto</Button>
+                  </div>
+                )}
+              </div>
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editing ? "Salvar" : "Criar e Imprimir OS"}
