@@ -187,14 +187,37 @@ export default function OrdensServico() {
               </div>
               <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
               <div className="grid gap-2">
-                <Label>Foto Anexa (sai na impressão)</Label>
-                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+                <Label>Fotos Anexas (saem na impressão)</Label>
+                {editing && (
+                  <Input
+                    placeholder="Legenda (ex: Antes, Depois)"
+                    value={legendaUpload}
+                    onChange={e => setLegendaUpload(e.target.value)}
+                  />
+                )}
+                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) { handleUpload(f); e.target.value = ""; } }} />
                 {uploading && <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Enviando...</p>}
-                {form.foto_url && (
+                {!editing && form.foto_url && (
                   <div className="relative">
                     <img src={form.foto_url} alt="Foto OS" className="max-h-40 rounded border" />
                     <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm(f => ({ ...f, foto_url: "" }))}>Remover foto</Button>
                   </div>
+                )}
+                {editing && fotosEdit && fotosEdit.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {fotosEdit.map(f => (
+                      <div key={f.id} className="relative border rounded p-1">
+                        <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-28 object-cover rounded" />
+                        {f.legenda && <p className="text-xs text-center mt-1 text-muted-foreground">{f.legenda}</p>}
+                        <Button type="button" variant="destructive" size="sm" className="w-full mt-1 h-7" onClick={() => deleteFoto.mutate({ id: f.id, ordem_servico_id: editing.id })}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {editing && (!fotosEdit || fotosEdit.length === 0) && (
+                  <p className="text-xs text-muted-foreground">Nenhuma foto anexa. Adicione quantas quiser (ex: antes/depois).</p>
                 )}
               </div>
               <Button onClick={handleSave} disabled={isSaving}>
