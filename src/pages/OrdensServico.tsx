@@ -17,6 +17,7 @@ import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOS } from "@/components/PrintOS";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useOSFotos, useAddOSFoto, useDeleteOSFoto, fetchOSFotos } from "@/hooks/useOSFotos";
 
 const statusOptions = [
   { value: "aberto", label: "Aberto" },
@@ -52,6 +53,12 @@ export default function OrdensServico() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
+  const [legendaUpload, setLegendaUpload] = useState("");
+
+  const { data: fotosEdit } = useOSFotos(editing?.id);
+  const { data: fotosView } = useOSFotos(viewing?.id);
+  const addFoto = useAddOSFoto();
+  const deleteFoto = useDeleteOSFoto();
 
   const filtered = (ordens ?? []).filter(o => {
     const matchSearch =
@@ -63,13 +70,15 @@ export default function OrdensServico() {
 
   const resetForm = () => { setForm(emptyForm); setEditing(null); };
 
-  const handlePrint = (o: any) => {
+  const handlePrint = async (o: any) => {
+    let fotos: { url: string; legenda?: string | null }[] = [];
+    try { fotos = (await fetchOSFotos(o.id)).map(f => ({ url: f.url, legenda: f.legenda })); } catch {}
     printOS({
       numero: o.numero, data: o.data_entrada, cliente: o.clientes?.nome ?? "—",
       problema: o.problema_relatado, diagnostico: o.diagnostico,
       servicos: o.servicos_realizados, valorMaoObra: Number(o.valor_mao_obra),
       valorPecas: Number(o.valor_pecas), status: statusLabel(o.status), observacoes: o.observacoes,
-      empresa, fotoUrl: o.foto_url,
+      empresa, fotoUrl: o.foto_url, fotos,
     });
   };
 
@@ -81,8 +90,14 @@ export default function OrdensServico() {
       const { error } = await supabase.storage.from("os-fotos").upload(path, file, { upsert: false });
       if (error) throw error;
       const { data } = supabase.storage.from("os-fotos").getPublicUrl(path);
-      setForm(f => ({ ...f, foto_url: data.publicUrl }));
-      toast.success("Foto enviada!");
+      if (editing) {
+        await addFoto.mutateAsync({ ordem_servico_id: editing.id, url: data.publicUrl, legenda: legendaUpload || undefined });
+        setLegendaUpload("");
+        toast.success("Foto adicionada!");
+      } else {
+        setForm(f => ({ ...f, foto_url: data.publicUrl }));
+        toast.success("Foto enviada! Salve a OS e adicione mais fotos editando-a.");
+      }
     } catch (e: any) {
       toast.error("Erro ao enviar foto: " + e.message);
     } finally {
@@ -99,16 +114,21 @@ export default function OrdensServico() {
       });
     } else {
       createOS.mutate({ ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           setDialogOpen(false); resetForm();
           if (data) {
             const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
+            // If the form had an initial foto_url uploaded before save, persist it as the first os_fotos entry
+            if (form.foto_url) {
+              try { await addFoto.mutateAsync({ ordem_servico_id: data.id, url: form.foto_url, legenda: "Foto inicial" }); } catch {}
+            }
+            const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
             printOS({
               numero: data.numero, data: data.data_entrada, cliente: clienteNome,
               problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
               servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
               valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
-              empresa, fotoUrl: (data as any).foto_url,
+              empresa, fotoUrl: (data as any).foto_url, fotos,
             });
           }
         },
