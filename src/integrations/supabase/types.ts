@@ -497,6 +497,33 @@ export type Database = {
           },
         ]
       }
+      os_fotos: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          legenda: string | null
+          ordem_servico_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          legenda?: string | null
+          ordem_servico_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          legenda?: string | null
+          ordem_servico_id?: string
+          url?: string
+        }
+        Relationships: []
+      }
       os_pecas: {
         Row: {
           created_at: string
