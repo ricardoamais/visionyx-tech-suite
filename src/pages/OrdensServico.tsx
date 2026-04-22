@@ -306,10 +306,22 @@ export default function OrdensServico() {
                 <div><span className="text-muted-foreground text-xs">Total</span><p className="font-bold text-primary">R$ {(Number(viewing.valor_mao_obra) + Number(viewing.valor_pecas)).toFixed(2)}</p></div>
               </div>
               {viewing.observacoes && <div><span className="text-muted-foreground">Observações:</span> <p>{viewing.observacoes}</p></div>}
-              {viewing.foto_url && (
+              {((fotosView && fotosView.length > 0) || viewing.foto_url) && (
                 <div>
-                  <span className="text-muted-foreground">Foto Anexa:</span>
-                  <img src={viewing.foto_url} alt="Foto OS" className="mt-2 max-h-60 rounded border" />
+                  <span className="text-muted-foreground">Fotos Anexas:</span>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {viewing.foto_url && !fotosView?.some(f => f.url === viewing.foto_url) && (
+                      <div className="border rounded p-1">
+                        <img src={viewing.foto_url} alt="Foto OS" className="w-full h-32 object-cover rounded" />
+                      </div>
+                    )}
+                    {fotosView?.map(f => (
+                      <div key={f.id} className="border rounded p-1">
+                        <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-32 object-cover rounded" />
+                        {f.legenda && <p className="text-xs text-center mt-1 text-muted-foreground">{f.legenda}</p>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               <div className="flex gap-2 mt-2">
