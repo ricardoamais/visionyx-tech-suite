@@ -17,6 +17,7 @@ import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOS } from "@/components/PrintOS";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useOSFotos, useAddOSFoto, useDeleteOSFoto, fetchOSFotos } from "@/hooks/useOSFotos";
 
 const statusOptions = [
   { value: "aberto", label: "Aberto" },
@@ -52,6 +53,12 @@ export default function OrdensServico() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
+  const [legendaUpload, setLegendaUpload] = useState("");
+
+  const { data: fotosEdit } = useOSFotos(editing?.id);
+  const { data: fotosView } = useOSFotos(viewing?.id);
+  const addFoto = useAddOSFoto();
+  const deleteFoto = useDeleteOSFoto();
 
   const filtered = (ordens ?? []).filter(o => {
     const matchSearch =
@@ -63,13 +70,15 @@ export default function OrdensServico() {
 
   const resetForm = () => { setForm(emptyForm); setEditing(null); };
 
-  const handlePrint = (o: any) => {
+  const handlePrint = async (o: any) => {
+    let fotos: { url: string; legenda?: string | null }[] = [];
+    try { fotos = (await fetchOSFotos(o.id)).map(f => ({ url: f.url, legenda: f.legenda })); } catch {}
     printOS({
       numero: o.numero, data: o.data_entrada, cliente: o.clientes?.nome ?? "—",
       problema: o.problema_relatado, diagnostico: o.diagnostico,
       servicos: o.servicos_realizados, valorMaoObra: Number(o.valor_mao_obra),
       valorPecas: Number(o.valor_pecas), status: statusLabel(o.status), observacoes: o.observacoes,
-      empresa, fotoUrl: o.foto_url,
+      empresa, fotoUrl: o.foto_url, fotos,
     });
   };
 
@@ -81,8 +90,14 @@ export default function OrdensServico() {
       const { error } = await supabase.storage.from("os-fotos").upload(path, file, { upsert: false });
       if (error) throw error;
       const { data } = supabase.storage.from("os-fotos").getPublicUrl(path);
-      setForm(f => ({ ...f, foto_url: data.publicUrl }));
-      toast.success("Foto enviada!");
+      if (editing) {
+        await addFoto.mutateAsync({ ordem_servico_id: editing.id, url: data.publicUrl, legenda: legendaUpload || undefined });
+        setLegendaUpload("");
+        toast.success("Foto adicionada!");
+      } else {
+        setForm(f => ({ ...f, foto_url: data.publicUrl }));
+        toast.success("Foto enviada! Salve a OS e adicione mais fotos editando-a.");
+      }
     } catch (e: any) {
       toast.error("Erro ao enviar foto: " + e.message);
     } finally {
@@ -99,16 +114,21 @@ export default function OrdensServico() {
       });
     } else {
       createOS.mutate({ ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           setDialogOpen(false); resetForm();
           if (data) {
             const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
+            // If the form had an initial foto_url uploaded before save, persist it as the first os_fotos entry
+            if (form.foto_url) {
+              try { await addFoto.mutateAsync({ ordem_servico_id: data.id, url: form.foto_url, legenda: "Foto inicial" }); } catch {}
+            }
+            const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
             printOS({
               numero: data.numero, data: data.data_entrada, cliente: clienteNome,
               problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
               servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
               valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
-              empresa, fotoUrl: (data as any).foto_url,
+              empresa, fotoUrl: (data as any).foto_url, fotos,
             });
           }
         },
@@ -167,14 +187,37 @@ export default function OrdensServico() {
               </div>
               <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
               <div className="grid gap-2">
-                <Label>Foto Anexa (sai na impressão)</Label>
-                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+                <Label>Fotos Anexas (saem na impressão)</Label>
+                {editing && (
+                  <Input
+                    placeholder="Legenda (ex: Antes, Depois)"
+                    value={legendaUpload}
+                    onChange={e => setLegendaUpload(e.target.value)}
+                  />
+                )}
+                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) { handleUpload(f); e.target.value = ""; } }} />
                 {uploading && <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Enviando...</p>}
-                {form.foto_url && (
+                {!editing && form.foto_url && (
                   <div className="relative">
                     <img src={form.foto_url} alt="Foto OS" className="max-h-40 rounded border" />
                     <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm(f => ({ ...f, foto_url: "" }))}>Remover foto</Button>
                   </div>
+                )}
+                {editing && fotosEdit && fotosEdit.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {fotosEdit.map(f => (
+                      <div key={f.id} className="relative border rounded p-1">
+                        <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-28 object-cover rounded" />
+                        {f.legenda && <p className="text-xs text-center mt-1 text-muted-foreground">{f.legenda}</p>}
+                        <Button type="button" variant="destructive" size="sm" className="w-full mt-1 h-7" onClick={() => deleteFoto.mutate({ id: f.id, ordem_servico_id: editing.id })}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {editing && (!fotosEdit || fotosEdit.length === 0) && (
+                  <p className="text-xs text-muted-foreground">Nenhuma foto anexa. Adicione quantas quiser (ex: antes/depois).</p>
                 )}
               </div>
               <Button onClick={handleSave} disabled={isSaving}>
@@ -263,10 +306,22 @@ export default function OrdensServico() {
                 <div><span className="text-muted-foreground text-xs">Total</span><p className="font-bold text-primary">R$ {(Number(viewing.valor_mao_obra) + Number(viewing.valor_pecas)).toFixed(2)}</p></div>
               </div>
               {viewing.observacoes && <div><span className="text-muted-foreground">Observações:</span> <p>{viewing.observacoes}</p></div>}
-              {viewing.foto_url && (
+              {((fotosView && fotosView.length > 0) || viewing.foto_url) && (
                 <div>
-                  <span className="text-muted-foreground">Foto Anexa:</span>
-                  <img src={viewing.foto_url} alt="Foto OS" className="mt-2 max-h-60 rounded border" />
+                  <span className="text-muted-foreground">Fotos Anexas:</span>
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {viewing.foto_url && !fotosView?.some(f => f.url === viewing.foto_url) && (
+                      <div className="border rounded p-1">
+                        <img src={viewing.foto_url} alt="Foto OS" className="w-full h-32 object-cover rounded" />
+                      </div>
+                    )}
+                    {fotosView?.map(f => (
+                      <div key={f.id} className="border rounded p-1">
+                        <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-32 object-cover rounded" />
+                        {f.legenda && <p className="text-xs text-center mt-1 text-muted-foreground">{f.legenda}</p>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               <div className="flex gap-2 mt-2">
