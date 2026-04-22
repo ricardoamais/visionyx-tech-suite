@@ -38,6 +38,7 @@ interface PrintOSProps {
   observacoes?: string;
   empresa?: EmpresaInfo | null;
   fotoUrl?: string | null;
+  fotos?: { url: string; legenda?: string | null }[];
 }
 
 export function printOS(d: PrintOSProps) {
@@ -74,6 +75,7 @@ ${empresaHeader(d.empresa)}
 </table>
 <div class="sig"><div>Técnico</div><div>Cliente</div></div>
 ${d.fotoUrl ? `<div style="margin-top:24px;page-break-inside:avoid"><div class="section-title">Foto Anexa</div><img src="${d.fotoUrl}" alt="Foto" style="max-width:100%;max-height:400px;border:1px solid #ddd;border-radius:4px" /></div>` : ""}
+${(d.fotos && d.fotos.length > 0) ? `<div style="margin-top:24px"><div class="section-title">Fotos Anexas</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">${d.fotos.map(f => `<div style="page-break-inside:avoid;text-align:center"><img src="${f.url}" alt="${f.legenda || 'Foto'}" style="max-width:100%;max-height:300px;border:1px solid #ddd;border-radius:4px" />${f.legenda ? `<div style="font-size:11px;color:#555;margin-top:4px">${f.legenda}</div>` : ""}</div>`).join("")}</div></div>` : ""}
 <div class="footer">Documento gerado em ${new Date().toLocaleString("pt-BR")}</div>
 </body></html>`;
   const win = window.open("", "_blank");
