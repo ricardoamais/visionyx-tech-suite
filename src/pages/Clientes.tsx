@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Edit, Trash2, Phone, Mail, Loader2 } from "lucide-react";
@@ -26,21 +26,27 @@ export default function Clientes() {
     (c.email || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!form.nome) return;
     if (editingId) {
-      await updateMutation.mutateAsync({ id: editingId, ...form });
+      updateMutation.mutate({ id: editingId, ...form }, {
+        onSuccess: () => { setDialogOpen(false); resetForm(); },
+      });
     } else {
-      await createMutation.mutateAsync(form);
+      createMutation.mutate(form, {
+        onSuccess: () => { setDialogOpen(false); resetForm(); },
+      });
     }
-    setDialogOpen(false);
-    resetForm();
   };
 
   const handleEdit = (c: typeof clientes[0]) => {
-    setEditingId(c.id);
-    setForm({ nome: c.nome, cpf_cnpj: c.cpf_cnpj || "", telefone: c.telefone || "", whatsapp: c.whatsapp || "", email: c.email || "", endereco: c.endereco || "", observacoes: c.observacoes || "" });
-    setDialogOpen(true);
+    setEditingId(null);
+    setForm({ nome: "", cpf_cnpj: "", telefone: "", whatsapp: "", email: "", endereco: "", observacoes: "" });
+    requestAnimationFrame(() => {
+      setEditingId(c.id);
+      setForm({ nome: c.nome, cpf_cnpj: c.cpf_cnpj || "", telefone: c.telefone || "", whatsapp: c.whatsapp || "", email: c.email || "", endereco: c.endereco || "", observacoes: c.observacoes || "" });
+      setDialogOpen(true);
+    });
   };
 
   const resetForm = () => { setForm({ nome: "", cpf_cnpj: "", telefone: "", whatsapp: "", email: "", endereco: "", observacoes: "" }); setEditingId(null); };
@@ -50,9 +56,13 @@ export default function Clientes() {
   return (
     <div className="space-y-6">
       <PageHeader title="Clientes" description="Gerencie seus clientes">
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Novo Cliente</Button></DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
+          <Plus className="w-4 h-4 mr-2" />Novo Cliente
+        </Button>
+      </PageHeader>
+
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editingId ? "Editar Cliente" : "Novo Cliente"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div className="grid gap-2"><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} /></div>
@@ -71,9 +81,8 @@ export default function Clientes() {
                 {editingId ? "Salvar" : "Cadastrar"}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </PageHeader>
+        </DialogContent>
+      </Dialog>
 
       <Card className="glass-card">
         <CardContent className="p-4">

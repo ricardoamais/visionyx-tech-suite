@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -100,10 +100,16 @@ export default function Orcamentos() {
   };
 
   const handleEdit = (o: any) => {
-    setEditing(o);
-    setForm({ cliente_id: o.cliente_id, observacoes: o.observacoes ?? "", status: o.status });
-    setItens((o.orcamento_itens ?? []).map((i: any) => ({ descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario })));
-    setDialogOpen(true);
+    setEditing(null);
+    setForm({ cliente_id: "", observacoes: "", status: "pendente" });
+    setItens([{ ...emptyItem }]);
+    requestAnimationFrame(() => {
+      setEditing(o);
+      setForm({ cliente_id: o.cliente_id, observacoes: o.observacoes ?? "", status: o.status });
+      setItens((o.orcamento_itens ?? []).map((i: any) => ({ descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario })));
+      refetchClientes();
+      setDialogOpen(true);
+    });
   };
 
   const isSaving = createOrc.isPending || updateOrc.isPending;
@@ -111,9 +117,13 @@ export default function Orcamentos() {
   return (
     <div className="space-y-6">
       <PageHeader title="Orçamentos" description="Gerencie orçamentos para clientes">
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (o) refetchClientes(); else resetForm(); }}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Novo Orçamento</Button></DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <Button onClick={() => { resetForm(); refetchClientes(); setDialogOpen(true); }}>
+          <Plus className="w-4 h-4 mr-2" />Novo Orçamento
+        </Button>
+      </PageHeader>
+
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar Orçamento" : "Novo Orçamento"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
@@ -167,9 +177,8 @@ export default function Orcamentos() {
                 {editing ? "Salvar" : "Criar e Imprimir"}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </PageHeader>
+        </DialogContent>
+      </Dialog>
 
       <Card className="glass-card">
         <CardContent className="p-4">
