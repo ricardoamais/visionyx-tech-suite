@@ -123,18 +123,19 @@ export default function OrdensServico() {
   const handleSave = () => {
     if (!form.cliente_id) return;
     if (editing) {
-      updateOS.mutate({ id: editing.id, ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
-        onSuccess: () => { closeDialog(); },
-      });
+      const editingId = editing.id;
+      const payload = { ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) };
+      closeDialog();
+      updateOS.mutate({ id: editingId, ...payload });
     } else {
-      createOS.mutate({ ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
+      const formSnapshot = { ...form };
+      const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
+      closeDialog();
+      createOS.mutate({ ...formSnapshot, valor_mao_obra: Number(formSnapshot.valor_mao_obra), valor_pecas: Number(formSnapshot.valor_pecas) }, {
         onSuccess: async (data) => {
-          closeDialog();
           if (data) {
-            const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
-            // If the form had an initial foto_url uploaded before save, persist it as the first os_fotos entry
-            if (form.foto_url) {
-              try { await addFoto.mutateAsync({ ordem_servico_id: data.id, url: form.foto_url, legenda: "Foto inicial" }); } catch {}
+            if (formSnapshot.foto_url) {
+              try { await addFoto.mutateAsync({ ordem_servico_id: data.id, url: formSnapshot.foto_url, legenda: "Foto inicial" }); } catch {}
             }
             const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
             printOS({
