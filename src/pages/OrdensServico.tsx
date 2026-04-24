@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -47,7 +47,7 @@ export default function OrdensServico() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<null | "create" | "edit">(null);
   const [viewDialog, setViewDialog] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
@@ -68,7 +68,21 @@ export default function OrdensServico() {
     return matchSearch && matchStatus;
   });
 
-  const resetForm = () => { setForm(emptyForm); setEditing(null); };
+  const resetForm = useCallback(() => { setForm(emptyForm); setEditing(null); }, []);
+
+  const openCreate = useCallback(() => {
+    setEditing(null);
+    setForm(emptyForm);
+    setDialogMode("create");
+    refetchClientes();
+  }, [refetchClientes]);
+
+  const closeDialog = useCallback(() => {
+    setDialogMode(null);
+    setEditing(null);
+    setForm(emptyForm);
+    setLegendaUpload("");
+  }, []);
 
   const handlePrint = async (o: any) => {
     let fotos: { url: string; legenda?: string | null }[] = [];
@@ -110,12 +124,12 @@ export default function OrdensServico() {
     if (!form.cliente_id) return;
     if (editing) {
       updateOS.mutate({ id: editing.id, ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
-        onSuccess: () => { setDialogOpen(false); resetForm(); },
+        onSuccess: () => { closeDialog(); },
       });
     } else {
       createOS.mutate({ ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) }, {
         onSuccess: async (data) => {
-          setDialogOpen(false); resetForm();
+          closeDialog();
           if (data) {
             const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
             // If the form had an initial foto_url uploaded before save, persist it as the first os_fotos entry
@@ -136,26 +150,33 @@ export default function OrdensServico() {
     }
   };
 
-  const handleEdit = (o: any) => {
-    setEditing(o);
-    setForm({
-      cliente_id: o.cliente_id, problema_relatado: o.problema_relatado ?? "",
-      diagnostico: o.diagnostico ?? "", servicos_realizados: o.servicos_realizados ?? "",
-      valor_mao_obra: o.valor_mao_obra ?? 0, valor_pecas: o.valor_pecas ?? 0,
-      status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
-      foto_url: o.foto_url ?? "",
+  const handleEdit = useCallback((o: any) => {
+    setEditing(null);
+    setForm(emptyForm);
+    requestAnimationFrame(() => {
+      setEditing(o);
+      setForm({
+        cliente_id: o.cliente_id, problema_relatado: o.problema_relatado ?? "",
+        diagnostico: o.diagnostico ?? "", servicos_realizados: o.servicos_realizados ?? "",
+        valor_mao_obra: o.valor_mao_obra ?? 0, valor_pecas: o.valor_pecas ?? 0,
+        status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
+        foto_url: o.foto_url ?? "",
+      });
+      setDialogMode("edit");
+      refetchClientes();
     });
-    setDialogOpen(true);
-  };
+  }, [refetchClientes]);
 
   const isSaving = createOS.isPending || updateOS.isPending;
 
   return (
     <div className="space-y-6">
       <PageHeader title="Ordens de Serviço" description="Gerencie todas as ordens de serviço">
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (o) refetchClientes(); else resetForm(); }}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Nova OS</Button></DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Nova OS</Button>
+      </PageHeader>
+
+      <Dialog open={dialogMode !== null} onOpenChange={(o) => { if (!o) closeDialog(); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar OS" : "Nova Ordem de Serviço"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-2">
               <div className="grid gap-2">
@@ -225,9 +246,8 @@ export default function OrdensServico() {
                 {editing ? "Salvar" : "Criar e Imprimir OS"}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </PageHeader>
+        </DialogContent>
+      </Dialog>
 
       <Card className="glass-card">
         <CardContent className="p-4">
