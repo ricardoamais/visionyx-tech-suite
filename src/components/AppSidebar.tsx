@@ -42,12 +42,9 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
   const isAdmin = role === "admin";
 
-  const filteredManagementItems = managementItems.filter(item => {
-    if (!isAdmin) {
-      return !["Financeiro", "Configurações"].includes(item.title);
-    }
-    return true;
-  });
+   const filteredManagementItems = managementItems.filter(item => 
+     isAdmin || !["Financeiro"].includes(item.title)
+   );
 
   return (
     <Sidebar collapsible="icon">

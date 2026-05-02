@@ -19,7 +19,7 @@ import { toast } from "sonner";
  import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Configuracoes() {
-  const { data: empresa, isLoading, isError } = useEmpresaConfig();
+   const { data: empresa, isLoading } = useEmpresaConfig();
   const updateEmpresa = useUpdateEmpresaConfig();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [form, setForm] = useState({ name: "", document: "", phone: "", endereco: "", email: "", whatsapp: "", logo_url: "" });
