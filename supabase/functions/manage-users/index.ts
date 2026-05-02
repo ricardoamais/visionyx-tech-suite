@@ -23,14 +23,18 @@ Deno.serve(async (req) => {
     const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !caller) throw new Error("Não autorizado");
 
-    const { data: roleCheck } = await supabaseAdmin
+    const { data: userData } = await supabaseAdmin
       .from("user_roles")
-      .select("role")
+      .select("role, company_id")
       .eq("user_id", caller.id)
-      .eq("role", "admin")
       .maybeSingle();
 
-    if (!roleCheck) throw new Error("Acesso negado: apenas administradores");
+    if (!userData || (userData.role !== "admin" && userData.role !== "super_admin")) {
+      throw new Error("Acesso negado");
+    }
+
+    const isSuperAdmin = userData.role === "super_admin";
+    const callerCompanyId = userData.company_id;
 
     const { action, ...params } = await req.json();
 
@@ -38,20 +42,68 @@ Deno.serve(async (req) => {
       const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 100 });
       if (error) throw error;
 
-      const { data: profiles } = await supabaseAdmin.from("profiles").select("*");
-      const { data: roles } = await supabaseAdmin.from("user_roles").select("*");
+      let queryProfiles = supabaseAdmin.from("profiles").select("*");
+      let queryRoles = supabaseAdmin.from("user_roles").select("*");
 
-      const result = users.map((u) => ({
-        id: u.id,
-        email: u.email,
-        created_at: u.created_at,
-        last_sign_in_at: u.last_sign_in_at,
-        nome: profiles?.find((p) => p.user_id === u.id)?.nome || u.email,
-        telefone: profiles?.find((p) => p.user_id === u.id)?.telefone || null,
-        role: roles?.find((r) => r.user_id === u.id)?.role || "tecnico",
-      }));
+      if (!isSuperAdmin) {
+        queryProfiles = queryProfiles.eq("company_id", callerCompanyId);
+        queryRoles = queryRoles.eq("company_id", callerCompanyId);
+      }
+
+      const { data: profiles } = await queryProfiles;
+      const { data: roles } = await queryRoles;
+
+      const result = users
+        .filter(u => profiles?.some(p => p.user_id === u.id))
+        .map((u) => ({
+          id: u.id,
+          email: u.email,
+          created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at,
+          nome: profiles?.find((p) => p.user_id === u.id)?.nome || u.email,
+          telefone: profiles?.find((p) => p.user_id === u.id)?.telefone || null,
+          role: roles?.find((r) => r.user_id === u.id)?.role || "tecnico",
+        }));
 
       return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "invite") {
+      const { email, nome, role } = params;
+      if (!email || !nome || !role) throw new Error("Dados incompletos");
+
+      if (!isSuperAdmin) {
+        // Check plan limit for users
+        const { data: canAdd } = await supabaseAdmin.rpc("check_plan_limit", { 
+          target_company_id: callerCompanyId, 
+          feature: 'users_total' 
+        });
+        if (!canAdd) throw new Error("Limite de usuários do seu plano atingido.");
+      }
+
+      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        data: { nome },
+        redirectTo: `${req.headers.get("origin") || ""}/login`,
+      });
+
+      if (inviteError) throw inviteError;
+
+      // Create profile and role with company_id
+      await supabaseAdmin.from("profiles").insert({
+        user_id: inviteData.user.id,
+        nome,
+        company_id: isSuperAdmin ? params.company_id : callerCompanyId,
+      });
+
+      await supabaseAdmin.from("user_roles").insert({
+        user_id: inviteData.user.id,
+        role,
+        company_id: isSuperAdmin ? params.company_id : callerCompanyId,
+      });
+
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
