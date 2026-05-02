@@ -5,10 +5,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useClientes() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["clientes", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["clientes", companyId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*").order("nome");
@@ -22,12 +22,12 @@ export function useClientes() {
 export function useCreateCliente() {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: { nome: string; cpf_cnpj?: string; telefone?: string; whatsapp?: string; email?: string; endereco?: string; observacoes?: string }) => {
       if (!user) throw new Error("Não autenticado");
-      if (!empresaId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase.from("clientes").insert({ ...input, user_id: user.id, empresa_id: empresaId }).select().single();
+      if (!companyId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("clientes").insert({ ...input, user_id: user.id, company_id: companyId }).select().single();
       if (error) throw error;
       return data;
     },

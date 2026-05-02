@@ -36,7 +36,7 @@ export function useUpdateEmpresaConfig() {
     }) => {
       const { id, ...rest } = input;
       const { data, error } = await supabase
-        .from("empresas")
+        .from("companies")
         .update(rest)
         .eq("id", id)
         .select("*");

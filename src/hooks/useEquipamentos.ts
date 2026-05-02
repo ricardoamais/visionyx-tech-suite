@@ -4,10 +4,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useEquipamentos(clienteId?: string) {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["equipamentos", empresaId, clienteId],
-    enabled: !!empresaId,
+    queryKey: ["equipamentos", companyId, clienteId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       let query = supabase.from("equipamentos").select("*, clientes(nome)").order("created_at", { ascending: false });
@@ -21,15 +21,15 @@ export function useEquipamentos(clienteId?: string) {
 
 export function useCreateEquipamento() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       tipo: string; marca: string; modelo?: string; numero_serie?: string;
       cliente_id: string; acessorios?: string; defeito_relatado?: string;
       senha_equipamento?: string; observacoes?: string;
     }) => {
-      if (!empresaId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase.from("equipamentos").insert({ ...input, empresa_id: empresaId }).select("*, clientes(nome)").single();
+      if (!companyId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("equipamentos").insert({ ...input, company_id: companyId }).select("*, clientes(nome)").single();
       if (error) throw error;
       return data;
     },

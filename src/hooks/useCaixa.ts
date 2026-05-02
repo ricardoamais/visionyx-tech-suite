@@ -5,10 +5,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useCaixaAberto() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["caixa_aberto", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["caixa_aberto", companyId],
+    enabled: !!companyId,
     staleTime: 10000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -25,10 +25,10 @@ export function useCaixaAberto() {
 }
 
 export function useCaixas() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["caixas", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["caixas", companyId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -44,15 +44,15 @@ export function useCaixas() {
 
 export function useAbrirCaixa() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   const { user } = useAuth();
   return useMutation({
     mutationFn: async (input: { valor_abertura: number; observacoes?: string }) => {
-      if (!empresaId || !user) throw new Error("Sessão inválida");
+      if (!companyId || !user) throw new Error("Sessão inválida");
       const { data, error } = await supabase
         .from("caixas")
         .insert({
-          empresa_id: empresaId,
+          company_id: companyId,
           user_id: user.id,
           valor_abertura: input.valor_abertura,
           observacoes: input.observacoes ?? null,
@@ -114,7 +114,7 @@ export function useVendasCaixa(caixaId: string | null | undefined) {
 
 export function useCreateVenda() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       caixa_id: string;
@@ -123,14 +123,14 @@ export function useCreateVenda() {
       observacoes?: string;
       itens: { peca_id: string; quantidade: number; valor_unitario: number }[];
     }) => {
-      if (!empresaId) throw new Error("Empresa não definida");
+      if (!companyId) throw new Error("Empresa não definida");
       if (!input.itens.length) throw new Error("Adicione ao menos um item");
       const valor_total = input.itens.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0);
 
       const { data: venda, error: e1 } = await supabase
         .from("vendas")
         .insert({
-          empresa_id: empresaId,
+          company_id: companyId,
           caixa_id: input.caixa_id,
           cliente_id: input.cliente_id || null,
           forma_pagamento: input.forma_pagamento,
@@ -143,7 +143,7 @@ export function useCreateVenda() {
 
       const { error: e2 } = await supabase.from("venda_itens").insert(
         input.itens.map((i) => ({
-          empresa_id: empresaId,
+          company_id: companyId,
           venda_id: venda.id,
           peca_id: i.peca_id,
           quantidade: i.quantidade,

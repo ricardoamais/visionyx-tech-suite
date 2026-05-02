@@ -8,10 +8,10 @@ type ContaTipo = Database["public"]["Enums"]["conta_tipo"];
 type ContaStatus = Database["public"]["Enums"]["conta_status"];
 
 export function useContas() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["contas", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["contas", companyId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -26,7 +26,7 @@ export function useContas() {
 
 export function useCreateConta() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       descricao: string;
@@ -37,8 +37,8 @@ export function useCreateConta() {
       forma_pagamento?: string;
       status?: ContaStatus;
     }) => {
-      if (!empresaId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase.from("contas").insert({ ...input, empresa_id: empresaId }).select().single();
+      if (!companyId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("contas").insert({ ...input, company_id: companyId }).select().single();
       if (error) throw error;
       return data;
     },

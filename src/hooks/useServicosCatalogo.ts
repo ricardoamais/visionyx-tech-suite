@@ -4,10 +4,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useServicosCatalogo() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["servicos_catalogo", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["servicos_catalogo", companyId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -23,11 +23,11 @@ export function useServicosCatalogo() {
 
 export function useCreateServicoCatalogo() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: { nome: string; valor_padrao?: number; descricao?: string; categoria?: string }) => {
-      if (!empresaId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase.from("servicos_catalogo").insert({ ...input, empresa_id: empresaId }).select().single();
+      if (!companyId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("servicos_catalogo").insert({ ...input, company_id: companyId }).select().single();
       if (error) throw error;
       return data;
     },
