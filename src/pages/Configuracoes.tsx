@@ -75,12 +75,61 @@ export default function Configuracoes() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Configurações" description="Configure o sistema conforme sua necessidade" />
-
-      <div className="grid gap-6 max-w-2xl">
-        <Card className="glass-card">
+   const qc = useQueryClient();
+   const [copied, setCopied] = useState(false);
+   const { data: settings } = useQuery({
+     queryKey: ["platform_settings"],
+     queryFn: async () => {
+       const { data } = await supabase.from("platform_settings").select("*").single();
+       return data;
+     },
+   });
+ 
+   const markAsPendingMutation = useMutation({
+     mutationFn: async () => {
+       const { error } = await supabase
+         .from("companies")
+         .update({ payment_status: 'pending' })
+         .eq("id", empresa!.id);
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       toast.success("Informamos o sistema. Aguarde a confirmação manual.");
+       qc.invalidateQueries({ queryKey: ["empresa-config"] });
+     },
+     onError: () => toast.error("Erro ao atualizar status."),
+   });
+ 
+   const getPrice = () => {
+     if (!empresa || !settings) return 0;
+     const plan = (empresa.plan || 'free').toLowerCase();
+     if (plan === 'pro') return Number(settings.price_pro);
+     if (plan === 'enterprise') return Number(settings.price_enterprise);
+     return Number(settings.price_free);
+   };
+ 
+   const amount = getPrice();
+   const description = empresa ? `Mensalidade Visionyx - ${empresa.name} - ${format(new Date(), 'MM/yyyy')}` : '';
+   const pixPayload = settings && empresa && amount > 0 ? generatePixPayload(
+     settings.pix_key,
+     settings.pix_name,
+     "SAO PAULO",
+     amount,
+     description
+   ) : '';
+ 
+   return (
+     <div className="space-y-6">
+       <PageHeader title="Configurações" description="Configure o sistema conforme sua necessidade" />
+ 
+       <Tabs defaultValue="geral" className="space-y-6">
+         <TabsList className="bg-muted/50 p-1 border">
+           <TabsTrigger value="geral" className="gap-2">Geral</TabsTrigger>
+           <TabsTrigger value="assinatura" className="gap-2">Assinatura</TabsTrigger>
+         </TabsList>
+ 
+         <TabsContent value="geral" className="space-y-6">
+           <div className="grid gap-6 max-w-2xl">
           <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
           <CardContent className="grid gap-4">
             {isLoading ? (
