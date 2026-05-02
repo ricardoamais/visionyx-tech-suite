@@ -12,12 +12,13 @@ interface AuthContextType {
   isSuperAdmin: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({ 
-  session: null, 
-  user: null, 
-  role: null, 
-  loading: true, 
-  signOut: async () => {} 
+const AuthContext = createContext<AuthContextType>({
+  session: null,
+  user: null,
+  role: null,
+  loading: true,
+  signOut: async () => {},
+  isSuperAdmin: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
