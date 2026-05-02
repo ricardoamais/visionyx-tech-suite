@@ -202,8 +202,86 @@ export default function Configuracoes() {
             <p className="text-xs text-muted-foreground">Configure o número para envio automático de OS e orçamentos via WhatsApp.</p>
             <Button variant="secondary" className="w-fit" onClick={() => toast.info("Integração em desenvolvimento")}>Configurar</Button>
           </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
+             </Card>
+           </div>
+         </TabsContent>
+ 
+         <TabsContent value="assinatura" className="space-y-6">
+           <div className="grid gap-6 max-w-2xl">
+             <Card className="glass-card">
+               <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-primary" /> Status da Assinatura</CardTitle></CardHeader>
+               <CardContent className="space-y-6">
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Plano Atual</p>
+                     <Badge className="capitalize text-sm px-3 py-1">{empresa?.plan || 'Free'}</Badge>
+                   </div>
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status de Pagamento</p>
+                     <Badge variant={empresa?.payment_status === 'active' ? 'default' : 'destructive'} className="text-sm px-3 py-1">
+                       {empresa?.payment_status === 'active' ? 'Em dia' : empresa?.payment_status === 'pending' ? 'Aguardando Confirmação' : 'Atrasado/Pendente'}
+                     </Badge>
+                   </div>
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Vencimento</p>
+                     <p className="font-bold">{empresa?.plan_expires_at ? format(new Date(empresa.plan_expires_at), "dd/MM/yyyy") : '—'}</p>
+                   </div>
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Valor Mensal</p>
+                     <p className="font-bold">{amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                   </div>
+                 </div>
+ 
+                 {amount > 0 && empresa?.payment_status !== 'active' && (
+                   <div className="pt-6 border-t space-y-6">
+                     <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/10">
+                       <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                       <div className="space-y-1">
+                         <p className="text-sm font-semibold">Pagamento Pendente</p>
+                         <p className="text-xs text-muted-foreground">Efetue o pagamento via Pix para manter seu acesso ativo.</p>
+                       </div>
+                     </div>
+ 
+                     <div className="flex flex-col items-center gap-4 py-4 bg-white rounded-xl border-2 border-dashed border-muted mx-auto max-w-[280px]">
+                       <div className="p-2 bg-white rounded-lg">
+                         <QRCode value={pixPayload} size={200} />
+                       </div>
+                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Escaneie o QR Code acima</p>
+                     </div>
+ 
+                     <div className="space-y-3">
+                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Código Copia e Cola</Label>
+                       <div className="flex gap-2">
+                         <div className="flex-1 p-3 bg-muted rounded-lg text-[10px] font-mono break-all line-clamp-2 leading-relaxed">
+                           {pixPayload}
+                         </div>
+                         <Button size="icon" variant="outline" className="shrink-0 h-auto" onClick={() => {
+                           navigator.clipboard.writeText(pixPayload);
+                           setCopied(true);
+                           toast.success("Código Pix copiado!");
+                           setTimeout(() => setCopied(false), 2000);
+                         }}>
+                           {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                         </Button>
+                       </div>
+                     </div>
+ 
+                     <Button 
+                       className="w-full" 
+                       size="lg"
+                       onClick={() => markAsPendingMutation.mutate()} 
+                       disabled={markAsPendingMutation.isPending || empresa?.payment_status === 'pending'}
+                     >
+                       {markAsPendingMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                       {empresa?.payment_status === 'pending' ? 'Aguardando Confirmação' : 'Já realizei o pagamento'}
+                     </Button>
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
+           </div>
+         </TabsContent>
+       </Tabs>
+     </div>
+   );
+ }
