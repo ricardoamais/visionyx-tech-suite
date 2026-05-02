@@ -111,6 +111,17 @@ export default function Orcamentos() {
     }
   });
 
+  const handleMarcarRecebido = (o: any) => {
+    const valor = Number(o.valor_total);
+    if (valor <= 0) { toast.error("Orçamento sem valor para registrar"); return; }
+    const clienteNome = (o as any).clientes?.nome ?? "Cliente";
+    createConta.mutate({
+      descricao: `${o.numero} - ${clienteNome}`,
+      valor, vencimento: new Date().toISOString().split("T")[0],
+      tipo: "receber", categoria: "Orçamentos", status: "recebido",
+    }, { onSuccess: () => toast.success(`R$ ${valor.toFixed(2)} registrado no financeiro como recebido!`) });
+  };
+
   const handleEdit = (o: any) => {
     if (o.status === "aprovado") { toast.error("Orçamentos aprovados não podem ser editados."); return; }
     setEditing(null);
