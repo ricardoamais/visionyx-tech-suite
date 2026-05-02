@@ -28,57 +28,26 @@ export default function Register() {
 
     setLoading(true);
     try {
-      // 1. Sign up user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          data: { nome: form.userName }
+      const { data, error } = await supabase.functions.invoke("create-company-onboarding", {
+        body: { 
+          name: form.name, 
+          document: form.document, 
+          email: form.email, 
+          password: form.password, 
+          owner_name: form.userName 
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Erro ao criar usuário");
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      // 2. Create company (using a bypass of RLS or relying on a temporary window if needed, 
-      // but here we just insert. Since we don't have a service role, we rely on the user being authenticated but without a profile yet)
-      // Actually, for multi-tenant setup, it's better to have a function or allow insert if authenticated
-      
-      const { data: companyData, error: companyError } = await supabase
-        .from("companies")
-        .insert({
-          name: form.name,
-          document: form.document,
-          email: form.email,
-          plan: "free",
-          is_active: true
-        })
-        .select()
-        .single();
+      // Após criar com sucesso na Edge Function, fazemos o login automático
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password
+      });
 
-      if (companyError) throw companyError;
-
-      // 3. Profiles and User Roles are usually handled by triggers if configured, 
-      // but we'll do it manually here to be safe and ensure the correct company_id
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert({
-          user_id: authData.user.id,
-          nome: form.userName,
-          company_id: companyData.id
-        });
-
-      if (profileError) throw profileError;
-
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: authData.user.id,
-          role: "admin",
-          company_id: companyData.id
-        });
-
-      if (roleError) throw roleError;
+      if (loginError) throw loginError;
 
       toast.success("Empresa cadastrada com sucesso!");
       navigate("/");
