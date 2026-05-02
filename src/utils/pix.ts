@@ -1,56 +1,50 @@
-function crc16ccitt(str: string): number {
-  let crc = 0xFFFF;
-  for (let i = 0; i < str.length; i++) {
-    crc ^= str.charCodeAt(i) << 8;
-    for (let j = 0; j < 8; j++) {
-      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
-      crc &= 0xFFFF;
-    }
-  }
-  return crc;
-}
-
-export function generatePixPayload(key: string, name: string, city: string, amount: number, description: string) {
-  function formatField(id: string, value: string) {
-    return id + value.length.toString().padStart(2, '0') + value;
-  }
-
-  const payload: string[] = [
-    '000201', // Payload Format Indicator
-  ];
-
-  // Merchant Account Information - Pix (ID 26)
-  const gui = formatField('00', 'br.gov.bcb.pix');
-  const keyField = formatField('01', key);
-  const descField = description ? formatField('02', description) : '';
-  payload.push(formatField('26', gui + keyField + descField));
-
-  payload.push('52040000'); // Merchant Category Code
-  payload.push('5303986'); // Transaction Currency - BRL
-
-  // Transaction Amount (ID 54)
-  if (amount > 0) {
-    const amountStr = amount.toFixed(2);
-    payload.push(formatField('54', amountStr));
-  }
-
-  payload.push('5802BR'); // Country Code
-
-  // Merchant Name (ID 59)
-  const formattedName = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 25);
-  payload.push(formatField('59', formattedName));
-
-  // Merchant City (ID 60)
-  const formattedCity = city.normalize("NFD").replace(/[\u0300-\u036f]/g, "").substring(0, 15);
-  payload.push(formatField('60', formattedCity));
-
-  // Additional Data Field Template (ID 62)
-  const txid = formatField('05', '***');
-  payload.push(formatField('62', txid));
-
-  // CRC16 (ID 63)
-  const prePayload = payload.join('') + '6304';
-  const crc = crc16ccitt(prePayload).toString(16).toUpperCase().padStart(4, '0');
-  
-  return prePayload + crc;
-}
+ function formatField(id: string, value: string): string {
+   const size = value.length.toString().padStart(2, '0');
+   return `${id}${size}${value}`;
+ }
+ 
+ function crc16(str: string): string {
+   let crc = 0xffff;
+   for (let i = 0; i < str.length; i++) {
+     crc ^= str.charCodeAt(i) << 8;
+     for (let j = 0; j < 8; j++) {
+       crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+     }
+   }
+   return (crc & 0xffff).toString(16).toUpperCase().padStart(4, '0');
+ }
+ 
+ export function generatePixPayload({
+   pixKey,
+   merchantName,
+   merchantCity,
+   amount,
+   description,
+ }: {
+   pixKey: string;
+   merchantName: string;
+   merchantCity: string;
+   amount: number;
+   description: string;
+ }): string {
+   const gui = formatField('00', 'BR.GOV.BCB.PIX');
+   const key = formatField('01', pixKey);
+   const desc = formatField('02', description.slice(0, 72));
+   const merchantAccountInfo = formatField('26', gui + key + desc);
+ 
+   const amountStr = amount.toFixed(2);
+ 
+   const payload =
+     formatField('00', '01') +
+     merchantAccountInfo +
+     formatField('52', '0000') +
+     formatField('53', '986') +
+     formatField('54', amountStr) +
+     formatField('58', 'BR') +
+     formatField('59', merchantName.slice(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, '')) +
+     formatField('60', merchantCity.slice(0, 15).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()) +
+     formatField('62', formatField('05', '***')) +
+     '6304';
+ 
+   return payload + crc16(payload);
+ }

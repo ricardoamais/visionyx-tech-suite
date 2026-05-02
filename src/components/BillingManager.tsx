@@ -96,14 +96,14 @@ export function BillingManager() {
   const amount = getPrice();
   if (amount <= 0 && !isBlocked) return null;
 
-  const description = `Mensalidade Visionyx - ${company.name} - ${format(new Date(), 'MM/yyyy')}`;
-  const pixPayload = generatePixPayload(
-    settings.pix_key,
-    settings.pix_name,
-    "SAO PAULO",
-    amount,
-    description
-  );
+   const description = `Mensalidade Visionyx - ${company.name} - ${format(new Date(), 'MM/yyyy')}`;
+   const pixPayload = generatePixPayload({
+     pixKey: settings.pix_key,
+     merchantName: settings.pix_name || 'Visionyx',
+     merchantCity: "SAO PAULO",
+     amount: amount,
+     description: description
+   });
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(pixPayload);

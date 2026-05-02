@@ -130,13 +130,13 @@ export default function Configuracoes() {
  
    const amount = getPrice();
    const description = empresa ? `Mensalidade Visionyx - ${empresa.name} - ${format(new Date(), 'MM/yyyy')}` : '';
-   const pixPayload = settings && empresa && amount > 0 ? generatePixPayload(
-     settings.pix_key,
-     settings.pix_name,
-     "SAO PAULO",
-     amount,
-     description
-   ) : '';
+    const pixPayload = settings && empresa && amount > 0 ? generatePixPayload({
+      pixKey: settings.pix_key,
+     merchantName: settings.pix_name || 'Visionyx',
+      merchantCity: "SAO PAULO",
+      amount: amount,
+      description: description
+    }) : '';
  
    return (
      <div className="space-y-6">
