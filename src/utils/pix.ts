@@ -28,9 +28,10 @@
    description: string;
  }): string {
    const gui = formatField('00', 'BR.GOV.BCB.PIX');
-   const key = formatField('01', pixKey);
+   const key = formatField('01', pixKey.slice(0, 77));
    const desc = formatField('02', description.slice(0, 72));
-   const merchantAccountInfo = formatField('26', gui + key + desc);
+   const innerContent = gui + key + desc;
+   const merchantAccountInfo = '26' + innerContent.length.toString().padStart(2, '0') + innerContent;
  
    const amountStr = amount.toFixed(2);
  
