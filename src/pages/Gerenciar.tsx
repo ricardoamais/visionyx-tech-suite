@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Pencil, KeyRound, ShieldCheck } from "lucide-react";
+import { Loader2, Pencil, KeyRound, ShieldCheck, UserPlus, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -70,6 +70,29 @@ export default function Gerenciar() {
   const [resetUser, setResetUser] = useState<ManagedUser | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteNome, setInviteNome] = useState("");
+  const [inviteRole, setInviteRole] = useState("tecnico");
+
+  const inviteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await supabase.functions.invoke("manage-users", {
+        body: { action: "invite", email: inviteEmail, nome: inviteNome, role: inviteRole },
+      });
+      if (res.error) throw new Error(res.error.message);
+      if (res.data?.error) throw new Error(res.data.error);
+    },
+    onSuccess: () => {
+      toast.success("Convite enviado com sucesso!");
+      setIsInviteOpen(false);
+      setInviteEmail("");
+      setInviteNome("");
+      qc.invalidateQueries({ queryKey: ["managed_users"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!editUser) return;
@@ -119,7 +142,9 @@ export default function Gerenciar() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Gerenciar Usuários" description="Gerencie os usuários cadastrados no sistema" />
+      <PageHeader title="Gerenciar Usuários" description="Gerencie os usuários cadastrados no sistema">
+        <Button onClick={() => setIsInviteOpen(true)}><UserPlus className="w-4 h-4 mr-2" /> Convidar Usuário</Button>
+      </PageHeader>
 
       <Card className="glass-card">
         <CardHeader>
@@ -149,8 +174,8 @@ export default function Gerenciar() {
                       <TableCell className="font-medium">{u.nome}</TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>
-                        <Badge variant={u.role === "admin" ? "default" : "secondary"}>
-                          {u.role === "admin" ? "Admin" : "Técnico"}
+                        <Badge variant={u.role === "admin" ? "default" : u.role === "financeiro" ? "outline" : "secondary"}>
+                          {u.role === "admin" ? "Admin" : u.role === "financeiro" ? "Financeiro" : "Técnico"}
                         </Badge>
                       </TableCell>
                       <TableCell>{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
@@ -188,6 +213,7 @@ export default function Gerenciar() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="financeiro">Financeiro</SelectItem>
                   <SelectItem value="tecnico">Técnico</SelectItem>
                 </SelectContent>
               </Select>
@@ -197,6 +223,34 @@ export default function Gerenciar() {
             <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
             <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
               {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Dialog */}
+      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Convidar Novo Usuário</DialogTitle></DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2"><Label>Nome</Label><Input value={inviteNome} onChange={(e) => setInviteNome(e.target.value)} placeholder="Nome completo" /></div>
+            <div className="grid gap-2"><Label>Email</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
+            <div className="grid gap-2">
+              <Label>Perfil</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="financeiro">Financeiro</SelectItem>
+                  <SelectItem value="tecnico">Técnico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsInviteOpen(false)}>Cancelar</Button>
+            <Button onClick={() => inviteMutation.mutate()} disabled={inviteMutation.isPending || !inviteEmail || !inviteNome}>
+              {inviteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} <Mail className="w-4 h-4 mr-2" /> Enviar Convite
             </Button>
           </DialogFooter>
         </DialogContent>

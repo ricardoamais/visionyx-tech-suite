@@ -6,16 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, Building2 } from "lucide-react";
 import { useEmpresaConfig, useUpdateEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Configuracoes() {
   const { data: empresa, isLoading, isError } = useEmpresaConfig();
   const updateEmpresa = useUpdateEmpresaConfig();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [form, setForm] = useState({ name: "", document: "", phone: "", endereco: "", email: "", whatsapp: "" });
+  const [form, setForm] = useState({ name: "", document: "", phone: "", endereco: "", email: "", whatsapp: "", logo_url: "" });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (empresa) {
@@ -26,6 +28,7 @@ export default function Configuracoes() {
         endereco: empresa.endereco || "",
         email: empresa.email || "",
         whatsapp: empresa.whatsapp || "",
+        logo_url: empresa.logo_url || "",
       });
     }
   }, [empresa]);
@@ -38,6 +41,34 @@ export default function Configuracoes() {
     updateEmpresa.mutate({ id: empresa.id, ...form });
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = e.target.files?.[0];
+      if (!file || !empresa) return;
+      
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const filePath = `logos/${empresa.id}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(filePath);
+        
+      setForm(f => ({ ...f, logo_url: publicUrl }));
+      toast.success("Logo enviada! Clique em salvar para confirmar.");
+    } catch (error: any) {
+      toast.error("Erro no upload: " + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Configurações" description="Configure o sistema conforme sua necessidade" />
@@ -46,10 +77,27 @@ export default function Configuracoes() {
         <Card className="glass-card">
           <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
           <CardContent className="grid gap-4">
-            {isLoading || isError ? (
+            {isLoading ? (
               <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
             ) : (
               <>
+                <div className="flex flex-col items-center gap-4 mb-4">
+                  <div className="relative group">
+                    <div className="w-24 h-24 rounded-xl bg-primary/10 border-2 border-dashed border-primary/20 flex items-center justify-center overflow-hidden">
+                      {form.logo_url ? (
+                        <img src={form.logo_url} alt="Logo" className="w-full h-full object-contain" />
+                      ) : (
+                        <Building2 className="w-8 h-8 text-primary/40" />
+                      )}
+                    </div>
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
+                      <Upload className="w-6 h-6 text-white" />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} disabled={uploading} />
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Clique para alterar o logo da empresa</p>
+                </div>
+
                 <div className="grid gap-2"><Label>Nome da Empresa</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2"><Label>CNPJ</Label><Input value={form.document} onChange={e => setForm(f => ({ ...f, document: e.target.value }))} /></div>

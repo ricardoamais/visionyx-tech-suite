@@ -18,6 +18,7 @@ import Estoque from "./pages/Estoque";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import Gerenciar from "./pages/Gerenciar";
+import Admin from "./pages/Admin";
 import Caixa from "./pages/Caixa";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -58,6 +59,13 @@ const PublicRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
+  const { role, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (role !== "super_admin") return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
@@ -80,6 +88,7 @@ const App = () => (
                 <Route path="/relatorios" element={<Relatorios />} />
                 <Route path="/configuracoes" element={<AdminRoute><Configuracoes /></AdminRoute>} />
                 <Route path="/gerenciar" element={<AdminRoute><Gerenciar /></AdminRoute>} />
+                <Route path="/admin" element={<SuperAdminRoute><Admin /></SuperAdminRoute>} />
                 <Route path="/caixa" element={<Caixa />} />
               </Route>
               <Route path="*" element={<NotFound />} />
