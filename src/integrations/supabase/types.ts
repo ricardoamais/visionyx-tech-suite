@@ -101,7 +101,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "clientes_company_id_fkey"
+            foreignKeyName: "clientes_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -202,7 +202,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "contas_company_id_fkey"
+            foreignKeyName: "contas_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -241,7 +241,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "empresa_usuarios_company_id_fkey"
+            foreignKeyName: "empresa_usuarios_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -304,7 +304,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "equipamentos_company_id_fkey"
+            foreignKeyName: "equipamentos_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -342,7 +342,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "orcamento_itens_company_id_fkey"
+            foreignKeyName: "orcamento_itens_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -403,7 +403,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "orcamentos_company_id_fkey"
+            foreignKeyName: "orcamentos_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -488,7 +488,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ordens_servico_company_id_fkey"
+            foreignKeyName: "ordens_servico_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -560,7 +560,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "os_pecas_company_id_fkey"
+            foreignKeyName: "os_pecas_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -615,7 +615,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "os_servicos_company_id_fkey"
+            foreignKeyName: "os_servicos_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -673,7 +673,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "pecas_company_id_fkey"
+            foreignKeyName: "pecas_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -755,7 +755,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "servicos_catalogo_company_id_fkey"
+            foreignKeyName: "servicos_catalogo_empresa_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -891,7 +891,7 @@ export type Database = {
     }
     Functions: {
       get_my_company_id: { Args: never; Returns: string }
-      get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      get_user_empresa_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
