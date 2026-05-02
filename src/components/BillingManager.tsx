@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Copy, CheckCircle2, AlertTriangle, Lock } from "lucide-react";
 import { toast } from "sonner";
 import QRCode from "react-qr-code";
- import { generatePix } from "@/utils/generatePix";
-import { format, differenceInDays, isAfter } from "date-fns";
+ import { generatePixPayload } from "@/utils/pixPayload";
+ import { format, differenceInDays, isAfter } from "date-fns";
+ import { useMemo } from "react";
 import { ptBR } from "date-fns/locale";
 
 export function BillingManager() {
@@ -17,8 +18,6 @@ export function BillingManager() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [pixPayload, setPixPayload] = useState('');
-  const [loadingPix, setLoadingPix] = useState(false);
 
   const { data: company, isLoading: loadingCompany } = useQuery({
     queryKey: ["current_company", user?.id],
@@ -75,24 +74,16 @@ export function BillingManager() {
 
   const pixDescription = company ? `Mensalidade Visionyx - ${company.name} - ${format(new Date(), 'MM/yyyy')}` : '';
 
-  useEffect(() => {
-    if (settings && company && planAmount > 0) {
-      setLoadingPix(true);
-      generatePix({
-        pixKey: settings.pix_key,
-        name: settings.pix_name || 'Visionyx',
-        city: "SAO PAULO",
-        amount: planAmount,
-        description: pixDescription
-      }).then(payload => {
-        setPixPayload(payload);
-        setLoadingPix(false);
-      }).catch(err => {
-        console.error(err);
-        setLoadingPix(false);
-      });
-    }
-  }, [settings, company, planAmount, pixDescription]);
+   const pixPayload = useMemo(() => {
+     if (!settings?.pix_key || !planAmount) return "";
+     return generatePixPayload(
+       settings.pix_key,
+       settings.pix_name || "Visionyx",
+       "SAO PAULO",
+       planAmount,
+       pixDescription
+     );
+   }, [settings, planAmount, pixDescription]);
 
   const markAsPendingMutation = useMutation({
     mutationFn: async () => {
@@ -161,13 +152,13 @@ export function BillingManager() {
             </p>
           </div>
 
-           {loadingPix ? (
-             <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg flex items-center justify-center mx-auto">
-               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-             </div>
-           ) : (
+           {pixPayload ? (
              <div className="bg-white p-4 rounded-lg inline-block mx-auto border-4 border-primary/10">
                <QRCode value={pixPayload} size={200} />
+             </div>
+           ) : (
+             <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg flex items-center justify-center mx-auto">
+               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
              </div>
            )}
 
@@ -207,13 +198,13 @@ export function BillingManager() {
             O vencimento é em {format(new Date(company.plan_expires_at), "dd 'de' MMMM", { locale: ptBR })}.
           </p>
 
-           {loadingPix ? (
-             <div className="w-[180px] h-[180px] bg-muted animate-pulse rounded-lg flex items-center justify-center mx-auto">
-               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-             </div>
-           ) : (
+           {pixPayload ? (
              <div className="bg-white p-3 rounded-lg inline-block mx-auto">
                <QRCode value={pixPayload} size={180} />
+             </div>
+           ) : (
+             <div className="w-[180px] h-[180px] bg-muted animate-pulse rounded-lg flex items-center justify-center mx-auto">
+               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
              </div>
            )}
 
