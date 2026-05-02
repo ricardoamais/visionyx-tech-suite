@@ -21,7 +21,8 @@ import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOrcamento } from "@/components/PrintOS";
-import { toast } from "sonner";
+ import { toast } from "sonner";
+ import { QuickAddCliente } from "@/components/QuickAddCliente";
 
 const statusMap: Record<string, string> = { pendente: "Pendente", aprovado: "Aprovado", reprovado: "Reprovado" };
 
@@ -149,13 +150,25 @@ export default function Orcamentos() {
           <DialogHeader><DialogTitle>{editing ? "Editar Orçamento" : "Novo Orçamento"}</DialogTitle></DialogHeader>
           <Form {...form}>
             <form onSubmit={handleSave} className="grid gap-4 py-2">
-              <FormField control={form.control} name="cliente_id" render={({ field }) => (
-                <FormItem><FormLabel>Cliente *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger></FormControl>
-                    <SelectContent>{(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-                  </Select><FormMessage /></FormItem>
-              )} />
+               <FormField control={form.control} name="cliente_id" render={({ field }) => (
+                 <FormItem>
+                   <FormLabel>Cliente *</FormLabel>
+                   <div className="flex gap-2">
+                     <Select onValueChange={field.onChange} value={field.value}>
+                       <FormControl>
+                         <SelectTrigger>
+                           <SelectValue placeholder="Selecione o cliente" />
+                         </SelectTrigger>
+                       </FormControl>
+                       <SelectContent>
+                         {(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                       </SelectContent>
+                     </Select>
+                     <QuickAddCliente onSuccess={(id) => field.onChange(id)} />
+                   </div>
+                   <FormMessage />
+                 </FormItem>
+               )} />
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem><FormLabel>Status</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
