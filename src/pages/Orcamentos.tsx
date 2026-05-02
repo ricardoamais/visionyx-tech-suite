@@ -40,23 +40,12 @@ const orcamentoSchema = z.object({
 type OrcamentoFormValues = z.infer<typeof orcamentoSchema>;
 
 export default function Orcamentos() {
-  const createOS = useCreateOS();
-
-  const form = useForm<OrcamentoFormValues>({
-    resolver: zodResolver(orcamentoSchema),
-    defaultValues: { cliente_id: "", observacoes: "", status: "pendente", itens: [{ descricao: "", quantidade: 1, valor_unitario: 0 }] },
-  });
-
-  const { fields: itensFields, append, remove } = useFieldArray({ control: form.control, name: "itens" });
-
-  const watchItens = form.watch("itens");
-  const valorTotal = watchItens?.reduce((s, i) => s + (i.quantidade || 0) * (i.valor_unitario || 0), 0) || 0;
-
   const { data: orcamentos, isLoading } = useOrcamentos();
   const { data: clientes, refetch: refetchClientes } = useClientes();
   const createOrc = useCreateOrcamento();
   const updateOrc = useUpdateOrcamento();
   const deleteOrc = useDeleteOrcamento();
+  const createOS = useCreateOS();
   const createConta = useCreateConta();
   const { data: empresa } = useEmpresaConfig();
 
@@ -65,12 +54,18 @@ export default function Orcamentos() {
   const [viewDialog, setViewDialog] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ cliente_id: "", observacoes: "", status: "pendente" });
-  const [itens, setItens] = useState([{ ...emptyItem }]);
+
+  const form = useForm<OrcamentoFormValues>({
+    resolver: zodResolver(orcamentoSchema),
+    defaultValues: { cliente_id: "", observacoes: "", status: "pendente", itens: [{ descricao: "", quantidade: 1, valor_unitario: 0 }] },
+  });
+
+  const { fields: itensFields, append, remove } = useFieldArray({ control: form.control, name: "itens" });
+  const watchItens = form.watch("itens");
+  const valorTotal = watchItens?.reduce((s, i) => s + (i.quantidade || 0) * (i.valor_unitario || 0), 0) || 0;
 
   const filtered = (orcamentos ?? []).filter(o =>
-    o.numero?.toLowerCase().includes(search.toLowerCase()) ||
-    (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase())
+    o.numero?.toLowerCase().includes(search.toLowerCase()) || (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase())
   );
 
   const resetForm = useCallback(() => {
@@ -78,12 +73,8 @@ export default function Orcamentos() {
     setEditing(null);
   }, [form]);
 
-  const valorTotal = itens.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0);
-
   const handlePrint = (o: any) => {
-    const items = (o.orcamento_itens ?? []).map((i: any) => ({
-      descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario,
-    }));
+    const items = (o.orcamento_itens ?? []).map((i: any) => ({ descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario }));
     printOrcamento({
       numero: o.numero, data: o.created_at, cliente: o.clientes?.nome ?? "—",
       itens: items, valorTotal: Number(o.valor_total), status: statusMap[o.status] ?? o.status,
@@ -91,49 +82,19 @@ export default function Orcamentos() {
     });
   };
 
-  const handleMarcarRecebido = (o: any) => {
-    const valor = Number(o.valor_total);
-    if (valor <= 0) { toast.error("Orçamento sem valor para registrar"); return; }
-    const clienteNome = (o as any).clientes?.nome ?? "Cliente";
-    createConta.mutate({
-      descricao: `${o.numero} - ${clienteNome}`,
-      valor,
-      vencimento: new Date().toISOString().split("T")[0],
-      tipo: "receber",
-      categoria: "Orçamentos",
-      status: "recebido",
-    }, {
-      onSuccess: () => {
-        toast.success(`R$ ${valor.toFixed(2)} registrado no financeiro como recebido!`);
-      },
-    });
-  };
-
   const handleGenerateOS = (o: any) => {
     if (o.status !== "aprovado") { toast.error("Apenas orçamentos aprovados podem gerar OS."); return; }
     createOS.mutate({
-      cliente_id: o.cliente_id,
-      problema_relatado: "Gerado a partir do Orçamento " + o.numero,
-      observacoes: o.observacoes,
-      status: "aberto",
-      servicos: (o.orcamento_itens || []).map((i: any) => ({
-        descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario
-      })),
-      valor_mao_obra: Number(o.valor_total),
-      valor_pecas: 0,
-    }, {
-      onSuccess: () => {
-        toast.success("Ordem de Serviço gerada com sucesso!");
-      }
-    });
+      cliente_id: o.cliente_id, problema_relatado: "Gerado a partir do Orçamento " + o.numero,
+      observacoes: o.observacoes, status: "aberto", valor_mao_obra: Number(o.valor_total), valor_pecas: 0,
+      servicos: (o.orcamento_itens || []).map((i: any) => ({ descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario })),
+    } as any, { onSuccess: () => toast.success("Ordem de Serviço gerada com sucesso!") });
   };
 
   const handleSave = form.handleSubmit((values) => {
     if (editing) {
       if (editing.status === "aprovado") { toast.error("Orçamentos aprovados não podem ser editados."); return; }
-      updateOrc.mutate({ id: editing.id, ...values, valor_total: valorTotal } as any, {
-        onSuccess: () => { setDialogOpen(false); resetForm(); },
-      });
+      updateOrc.mutate({ id: editing.id, ...values, valor_total: valorTotal } as any, { onSuccess: () => { setDialogOpen(false); resetForm(); } });
     } else {
       createOrc.mutate(values as any, {
         onSuccess: (data) => {
@@ -141,7 +102,7 @@ export default function Orcamentos() {
           const clienteNome = clientes?.find(c => c.id === values.cliente_id)?.nome ?? "";
           printOrcamento({
             numero: data.numero, data: data.created_at, cliente: clienteNome,
-            itens: values.itens, valorTotal, status: statusMap[data.status] ?? data.status,
+            itens: values.itens as any, valorTotal, status: statusMap[data.status] ?? data.status,
             observacoes: data.observacoes ?? undefined, empresa,
           });
           resetForm();
@@ -151,13 +112,11 @@ export default function Orcamentos() {
   });
 
   const handleEdit = (o: any) => {
+    if (o.status === "aprovado") { toast.error("Orçamentos aprovados não podem ser editados."); return; }
     setEditing(null);
-    setForm({ cliente_id: "", observacoes: "", status: "pendente" });
-    setItens([{ ...emptyItem }]);
     requestAnimationFrame(() => {
       setEditing(o);
-      setForm({ cliente_id: o.cliente_id, observacoes: o.observacoes ?? "", status: o.status });
-      setItens((o.orcamento_itens ?? []).map((i: any) => ({ descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario })));
+      form.reset({ cliente_id: o.cliente_id, observacoes: o.observacoes ?? "", status: o.status, itens: (o.orcamento_itens || []).map((i: any) => ({ descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario })) });
       refetchClientes();
       setDialogOpen(true);
     });
