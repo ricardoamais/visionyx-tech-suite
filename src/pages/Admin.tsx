@@ -99,10 +99,67 @@ export default function Admin() {
     },
   });
 
-  const filtered = companies?.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+   const { data: platformSettings } = useQuery({
+     queryKey: ["platform_settings_admin"],
+     queryFn: async () => {
+       const { data } = await supabase.from("platform_settings").select("*").single();
+       return data;
+     },
+   });
+ 
+   const updateSettingsMutation = useMutation({
+     mutationFn: async (values: any) => {
+       const { error } = await supabase
+         .from("platform_settings")
+         .update(values)
+         .eq("id", platformSettings.id);
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       toast.success("Configurações atualizadas!");
+       qc.invalidateQueries({ queryKey: ["platform_settings_admin"] });
+     },
+     onError: (e: Error) => toast.error(e.message),
+   });
+ 
+   const updateCompanyPaymentMutation = useMutation({
+     mutationFn: async ({ id, status, expiresAt }: { id: string, status: string, expiresAt?: string }) => {
+       const updates: any = { payment_status: status };
+       if (expiresAt) updates.plan_expires_at = expiresAt;
+       
+       const { error } = await supabase
+         .from("companies")
+         .update(updates)
+         .eq("id", id);
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       toast.success("Empresa atualizada!");
+       qc.invalidateQueries({ queryKey: ["all_companies"] });
+     },
+     onError: (e: Error) => toast.error(e.message),
+   });
+ 
+   const [pixKey, setPixKey] = useState("");
+   const [pixName, setPixName] = useState("");
+   const [priceFree, setPriceFree] = useState("");
+   const [pricePro, setPricePro] = useState("");
+   const [priceEnterprise, setPriceEnterprise] = useState("");
+ 
+   useEffect(() => {
+     if (platformSettings) {
+       setPixKey(platformSettings.pix_key);
+       setPixName(platformSettings.pix_name);
+       setPriceFree(platformSettings.price_free.toString());
+       setPricePro(platformSettings.price_pro.toString());
+       setPriceEnterprise(platformSettings.price_enterprise.toString());
+     }
+   }, [platformSettings]);
+ 
+   const filtered = companies?.filter(c => 
+     c.name.toLowerCase().includes(search.toLowerCase()) || 
+     c.email?.toLowerCase().includes(search.toLowerCase())
+   );
 
   const stats = {
     total: companies?.length || 0,
