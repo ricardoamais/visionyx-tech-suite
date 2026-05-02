@@ -28,7 +28,7 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("onboarding-v2", {
+      const { data, error } = await supabase.functions.invoke("create-company", {
         body: { 
           companyName: form.name, 
           cnpj: form.document, 
