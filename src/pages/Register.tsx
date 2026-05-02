@@ -28,13 +28,13 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-company-onboarding", {
+      const { data, error } = await supabase.functions.invoke("create-company", {
         body: { 
-          name: form.name, 
-          document: form.document, 
+          companyName: form.name, 
+          cnpj: form.document, 
           email: form.email, 
           password: form.password, 
-          owner_name: form.userName 
+          ownerName: form.userName 
         }
       });
 
