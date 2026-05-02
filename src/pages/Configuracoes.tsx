@@ -9,8 +9,14 @@ import { Separator } from "@/components/ui/separator";
  import { Loader2, Upload, Building2, CreditCard, ShieldCheck, AlertCircle, Copy, CheckCircle2 } from "lucide-react";
 import { useEmpresaConfig, useUpdateEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { toast } from "sonner";
-import { useTheme } from "next-themes";
-import { supabase } from "@/integrations/supabase/client";
+ import { useTheme } from "next-themes";
+ import { supabase } from "@/integrations/supabase/client";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Badge } from "@/components/ui/badge";
+ import { generatePixPayload } from "@/utils/pix";
+ import { format } from "date-fns";
+ import QRCode from "react-qr-code";
+ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Configuracoes() {
   const { data: empresa, isLoading, isError } = useEmpresaConfig();
