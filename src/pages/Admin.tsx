@@ -168,38 +168,46 @@ export default function Admin() {
     premium: companies?.filter(c => c.plan !== 'free').length || 0,
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Administração Geral" description="Gerencie todas as empresas e planos da plataforma" />
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total</CardTitle><Building2 className="w-4 h-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Ativas</CardTitle><ShieldCheck className="w-4 h-4 text-emerald-500" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.active}</div></CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Plano Free</CardTitle><CreditCard className="w-4 h-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.free}</div></CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pro/Enterprise</CardTitle><CreditCard className="w-4 h-4 text-primary" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.premium}</div></CardContent>
-        </Card>
-      </div>
-
-      <Card className="glass-card">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Empresas Cadastradas</CardTitle>
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar empresa ou email..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-        </CardHeader>
-        <CardContent>
+   return (
+     <div className="space-y-6">
+       <PageHeader title="Gerenciar Plataforma" description="Gerencie todas as empresas, planos e cobranças" />
+ 
+       <Tabs defaultValue="companies" className="space-y-4">
+         <TabsList className="bg-muted/50 p-1 border">
+           <TabsTrigger value="companies" className="gap-2"><Building2 className="w-4 h-4" /> Empresas</TabsTrigger>
+           <TabsTrigger value="billing" className="gap-2"><CreditCard className="w-4 h-4" /> Cobranças</TabsTrigger>
+           <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" /> Configurações Pix</TabsTrigger>
+         </TabsList>
+ 
+         <TabsContent value="companies" className="space-y-4">
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+             <Card className="glass-card">
+               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total</CardTitle><Building2 className="w-4 h-4 text-muted-foreground" /></CardHeader>
+               <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
+             </Card>
+             <Card className="glass-card">
+               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Ativas</CardTitle><ShieldCheck className="w-4 h-4 text-emerald-500" /></CardHeader>
+               <CardContent><div className="text-2xl font-bold">{stats.active}</div></CardContent>
+             </Card>
+             <Card className="glass-card">
+               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Plano Free</CardTitle><CreditCard className="w-4 h-4 text-muted-foreground" /></CardHeader>
+               <CardContent><div className="text-2xl font-bold">{stats.free}</div></CardContent>
+             </Card>
+             <Card className="glass-card">
+               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pro/Enterprise</CardTitle><CreditCard className="w-4 h-4 text-primary" /></CardHeader>
+               <CardContent><div className="text-2xl font-bold">{stats.premium}</div></CardContent>
+             </div>
+           </div>
+ 
+           <Card className="glass-card">
+             <CardHeader className="flex flex-row items-center justify-between">
+               <CardTitle className="text-base">Empresas Cadastradas</CardTitle>
+               <div className="relative w-64">
+                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                 <Input placeholder="Buscar empresa ou email..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
+               </div>
+             </CardHeader>
+             <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
           ) : (
