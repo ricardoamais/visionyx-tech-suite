@@ -72,8 +72,8 @@ export default function Relatorios() {
        isWithinInterval(parseISO(c.vencimento), interval)
      );
  
-     const osAbertas = os.filter(o => o.status === "aberto" || o.status === "em_andamento").length;
-     const osFinalizadas = os.filter(o => o.status === "finalizada" || o.status === "entregue").length;
+     const osAbertas = os.filter(o => ["aberto", "em_analise", "aguardando_aprovacao", "em_manutencao"].includes(o.status)).length;
+     const osFinalizadas = os.filter(o => ["finalizado", "entregue"].includes(o.status)).length;
      const faturamento = receipts.reduce((acc, curr) => acc + Number(curr.valor), 0);
      const ticketMedio = osFinalizadas > 0 ? faturamento / osFinalizadas : 0;
      const orcAprovados = orcs.filter(o => o.status === "aprovado").length;
@@ -90,8 +90,8 @@ export default function Relatorios() {
  
      const statusOSData = [
        { name: "Aberto", value: os.filter(o => o.status === "aberto").length },
-       { name: "Em Andamento", value: os.filter(o => o.status === "em_andamento").length },
-       { name: "Finalizada", value: os.filter(o => o.status === "finalizada").length },
+       { name: "Em Manutenção", value: os.filter(o => o.status === "em_manutencao").length },
+       { name: "Finalizada", value: os.filter(o => o.status === "finalizado").length },
        { name: "Entregue", value: os.filter(o => o.status === "entregue").length },
      ].filter(s => s.value > 0);
  
@@ -110,7 +110,7 @@ export default function Relatorios() {
  
      const clienteReceita: Record<string, { nome: string, total: number }> = {};
      os.forEach(o => {
-       if (o.status === "finalizada" || o.status === "entregue") {
+       if (["finalizado", "entregue"].includes(o.status)) {
          const clienteId = o.cliente_id;
          const valor = (Number(o.valor_mao_obra) || 0) + (Number(o.valor_pecas) || 0);
          if (!clienteReceita[clienteId]) {
@@ -235,8 +235,8 @@ export default function Relatorios() {
        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
          <StatCard title="OS Abertas" value={filteredData.summary.osAbertas} icon={BarChart} />
          <StatCard title="OS Finalizadas" value={filteredData.summary.osFinalizadas} icon={BarChart} />
-         <StatCard title="Faturamento Total" value={formatCurrency(filteredData.summary.faturamento)} icon={BarChart} />
-         <StatCard title="Ticket Médio" value={formatCurrency(filteredData.summary.ticketMedio)} icon={BarChart} />
+         <StatCard title="Faturamento Total" value={formatCurrency(filteredData.summary.faturamento)} icon={FileDown} />
+         <StatCard title="Ticket Médio" value={formatCurrency(filteredData.summary.ticketMedio)} icon={CalendarIcon} />
          <StatCard title="Orçamentos Aprovados" value={filteredData.summary.orcAprovados} icon={BarChart} />
          <StatCard title="Orçamentos Recusados" value={filteredData.summary.orcRecusados} icon={BarChart} />
        </div>
