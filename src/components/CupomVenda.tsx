@@ -41,10 +41,10 @@ export function imprimirCupom({ empresa, venda, cliente }: CupomVendaProps) {
 </style>
 </head>
 <body>
-  <div class="center bold xl">${empresa?.nome ?? "EMPRESA"}</div>
-  ${empresa?.cnpj ? `<div class="center">CNPJ: ${empresa.cnpj}</div>` : ""}
+  <div class="center bold xl">${empresa?.name ?? "EMPRESA"}</div>
+  ${empresa?.document ? `<div class="center">CNPJ: ${empresa.document}</div>` : ""}
   ${empresa?.endereco ? `<div class="center">${empresa.endereco}</div>` : ""}
-  ${empresa?.telefone ? `<div class="center">Tel: ${empresa.telefone}</div>` : ""}
+  ${empresa?.phone ? `<div class="center">Tel: ${empresa.phone}</div>` : ""}
   <hr/>
   <div class="center bold">CUPOM NAO FISCAL</div>
   <div class="center">VENDA</div>
