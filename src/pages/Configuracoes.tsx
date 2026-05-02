@@ -13,10 +13,11 @@ import { toast } from "sonner";
  import { supabase } from "@/integrations/supabase/client";
  import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Badge } from "@/components/ui/badge";
-  import { generatePix } from "@/utils/generatePix";
+  import { generatePixPayload } from "@/utils/pixPayload";
  import { format } from "date-fns";
- import QRCode from "react-qr-code";
- import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+  import QRCode from "react-qr-code";
+  import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+  import { useMemo } from "react";
 
 export default function Configuracoes() {
    const { data: empresa, isLoading } = useEmpresaConfig();
@@ -130,27 +131,16 @@ export default function Configuracoes() {
  
    const amount = getPrice();
    const description = empresa ? `Mensalidade Visionyx - ${empresa.name} - ${format(new Date(), 'MM/yyyy')}` : '';
-    const [pixPayload, setPixPayload] = useState('');
-    const [loadingPix, setLoadingPix] = useState(false);
-
-    useEffect(() => {
-      if (settings && empresa && amount > 0) {
-        setLoadingPix(true);
-        generatePix({
-          pixKey: settings.pix_key,
-          name: settings.pix_name || 'Visionyx',
-          city: "SAO PAULO",
-          amount: amount,
-          description: description
-        }).then(payload => {
-          setPixPayload(payload);
-          setLoadingPix(false);
-        }).catch(err => {
-          console.error(err);
-          setLoadingPix(false);
-        });
-      }
-    }, [settings, empresa, amount, description]);
+    const pixPayload = useMemo(() => {
+      if (!settings?.pix_key || !amount) return "";
+      return generatePixPayload(
+        settings.pix_key,
+        settings.pix_name || "Visionyx",
+        "SAO PAULO",
+        amount,
+        description
+      );
+    }, [settings, amount, description]);
  
    return (
      <div className="space-y-6">
@@ -313,17 +303,17 @@ export default function Configuracoes() {
                       </div>
                     )}
 
-                    {loadingPix ? (
-                      <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-xl border-2 border-dashed border-muted mx-auto max-w-[280px]">
-                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mb-2" />
-                        <p className="text-xs text-muted-foreground">Gerando QR Code...</p>
-                      </div>
-                    ) : (
+                    {pixPayload ? (
                       <div className="flex flex-col items-center gap-4 py-4 bg-white rounded-xl border-2 border-dashed border-muted mx-auto max-w-[280px]">
                         <div className="p-2 bg-white rounded-lg">
                           <QRCode value={pixPayload} size={200} />
                         </div>
                         <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Escaneie o QR Code acima</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 bg-muted/50 rounded-xl border-2 border-dashed border-muted mx-auto max-w-[280px]">
+                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mb-2" />
+                        <p className="text-xs text-muted-foreground">Gerando QR Code...</p>
                       </div>
                     )}
 
