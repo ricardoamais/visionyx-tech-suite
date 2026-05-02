@@ -9,10 +9,12 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { useEmpresaConfig, useUpdateEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 
 export default function Configuracoes() {
   const { data: empresa, isLoading, isError } = useEmpresaConfig();
   const updateEmpresa = useUpdateEmpresaConfig();
+  const { theme, setTheme } = useTheme();
   const [form, setForm] = useState({ nome: "", cnpj: "", telefone: "", endereco: "", email: "", whatsapp: "" });
 
   useEffect(() => {
@@ -72,7 +74,10 @@ export default function Configuracoes() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div><p className="text-sm font-medium">Tema Escuro</p><p className="text-xs text-muted-foreground">Alterne entre tema claro e escuro</p></div>
-              <Switch />
+              <Switch 
+                checked={theme === "dark"} 
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")} 
+              />
             </div>
             <Separator />
             <div className="flex items-center justify-between">
