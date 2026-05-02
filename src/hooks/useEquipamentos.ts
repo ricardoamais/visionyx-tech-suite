@@ -3,16 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
-export function useEquipamentos() {
+export function useEquipamentos(clienteId?: string) {
   const { empresaId } = useEmpresa();
   return useQuery({
-    queryKey: ["equipamentos", empresaId],
+    queryKey: ["equipamentos", empresaId, clienteId],
     enabled: !!empresaId,
+    staleTime: 30000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("equipamentos")
-        .select("*, clientes(nome)")
-        .order("created_at", { ascending: false });
+      let query = supabase.from("equipamentos").select("*, clientes(nome)").order("created_at", { ascending: false });
+      if (clienteId) query = query.eq("cliente_id", clienteId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },

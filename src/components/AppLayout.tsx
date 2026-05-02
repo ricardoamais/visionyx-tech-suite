@@ -3,8 +3,23 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Outlet, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
 export function AppLayout() {
   const location = useLocation();
+  const { user, role } = useAuth();
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("nome").eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+  });
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -14,12 +29,14 @@ export function AppLayout() {
             <SidebarTrigger className="mr-4" />
             <div className="flex-1" />
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-xs font-semibold text-primary">AD</span>
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                <span className="text-xs font-semibold text-primary">
+                  {profile?.nome?.substring(0, 2).toUpperCase() || "US"}
+                </span>
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium">Admin</p>
-                <p className="text-xs text-muted-foreground">Administrador</p>
+                <p className="text-sm font-medium">{profile?.nome || "Usuário"}</p>
+                <p className="text-xs text-muted-foreground capitalize">{role === 'admin' ? 'Administrador' : 'Técnico'}</p>
               </div>
             </div>
           </header>

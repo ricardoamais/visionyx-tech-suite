@@ -1,7 +1,4 @@
-import {
-  ClipboardList, Clock, CheckCircle, FileText, DollarSign,
-  TrendingUp, TrendingDown
-} from "lucide-react";
+import { ClipboardList, Clock, CheckCircle, FileText, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,37 +18,70 @@ const statusMap: Record<string, string> = {
   entregue: "Entregue",
 };
 
-const chartData = [
-  { mes: "Jan", receita: 4200, despesa: 2100 },
-  { mes: "Fev", receita: 5800, despesa: 2400 },
-  { mes: "Mar", receita: 3900, despesa: 1900 },
-  { mes: "Abr", receita: 6100, despesa: 2800 },
-  { mes: "Mai", receita: 7200, despesa: 3100 },
-  { mes: "Jun", receita: 5500, despesa: 2600 },
-];
-
 export default function Dashboard() {
   const { empresaId } = useEmpresa();
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading } = useQuery({
     queryKey: ["dashboard-stats", empresaId],
     enabled: !!empresaId,
+    staleTime: 30000,
     queryFn: async () => {
       const now = new Date();
-      const mesInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const mesFim = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(now.getMonth() - 5);
+      sixMonthsAgo.setDate(1);
+      sixMonthsAgo.setHours(0, 0, 0, 0);
 
       const [osRes, orcRes, contasRes] = await Promise.all([
-        supabase.from("ordens_servico").select("id, status, valor_mao_obra, valor_pecas, numero, cliente_id, created_at, clientes(nome)").order("created_at", { ascending: false }).limit(10),
-        supabase.from("orcamentos").select("id, status"),
-        supabase.from("contas").select("id, tipo, valor, status, created_at"),
+        supabase
+          .from("ordens_servico")
+          .select("id, status, numero, created_at, clientes(nome)")
+          .eq("empresa_id", empresaId)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("orcamentos")
+          .select("id, status")
+          .eq("empresa_id", empresaId),
+        supabase
+          .from("contas")
+          .select("id, tipo, valor, status, vencimento, created_at")
+          .eq("empresa_id", empresaId)
+          .gte("created_at", sixMonthsAgo.toISOString()),
       ]);
       const os = osRes.data || [];
       const orc = orcRes.data || [];
       const contas = contasRes.data || [];
 
-      const contasMes = contas.filter(c => c.created_at >= mesInicio && c.created_at <= mesFim);
-      const faturamentoMes = contasMes
-        .filter(c => c.tipo === "receber" && (c.status === "recebido" || c.status === "pago"))
+      const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const chartDataMap: Record<string, { mes: string; receita: number; despesa: number; sortKey: number }> = {};
+      
+      for (let i = 0; i < 6; i++) {
+        const d = new Date();
+        d.setMonth(now.getMonth() - i);
+        const monthLabel = months[d.getMonth()];
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        chartDataMap[key] = { mes: monthLabel, receita: 0, despesa: 0, sortKey: d.getTime() };
+      }
+
+      contas.forEach(c => {
+        const d = new Date(c.created_at);
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        if (chartDataMap[key]) {
+          if (c.tipo === "receber" && c.status === "recebido") {
+            chartDataMap[key].receita += Number(c.valor);
+          } else if (c.tipo === "pagar" && c.status === "pago") {
+            chartDataMap[key].despesa += Number(c.valor);
+          }
+        }
+      });
+
+      const chartData = Object.values(chartDataMap)
+        .sort((a, b) => a.sortKey - b.sortKey)
+        .map(({ mes, receita, despesa }) => ({ mes, receita, despesa }));
+
+      const faturamentoMes = contas
+        .filter(c => c.created_at >= firstDayOfMonth && c.tipo === "receber" && c.status === "recebido")
         .reduce((s, c) => s + Number(c.valor), 0);
 
       return {
@@ -60,14 +90,15 @@ export default function Dashboard() {
         osFinalizadas: os.filter(o => o.status === "finalizado" || o.status === "entregue").length,
         orcPendentes: orc.filter(o => o.status === "pendente").length,
         faturamentoMes,
-        aReceber: contas.filter(c => c.tipo === "receber" && c.status === "pendente").reduce((s, c) => s + Number(c.valor), 0),
-        aPagar: contas.filter(c => c.tipo === "pagar" && c.status === "pendente").reduce((s, c) => s + Number(c.valor), 0),
-        recentOS: os.slice(0, 5),
+        aReceber: contas.filter(c => c.tipo === "receber" && (c.status === "pendente" || c.status === "vencido")).reduce((s, c) => s + Number(c.valor), 0),
+        aPagar: contas.filter(c => c.tipo === "pagar" && (c.status === "pendente" || c.status === "vencido")).reduce((s, c) => s + Number(c.valor), 0),
+        recentOS: os.slice(0, 10),
+        chartData,
       };
     },
   });
 
-  if (!stats) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
+  if (isLoading || !stats) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="space-y-6">
@@ -84,9 +115,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Faturamento do Mês" value={`R$ ${stats.faturamentoMes.toLocaleString("pt-BR")}`} icon={DollarSign} />
-        <StatCard title="Contas a Receber" value={`R$ ${stats.aReceber.toLocaleString("pt-BR")}`} icon={TrendingUp} />
-        <StatCard title="Contas a Pagar" value={`R$ ${stats.aPagar.toLocaleString("pt-BR")}`} icon={TrendingDown} />
+        <StatCard title="Faturamento do Mês" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.faturamentoMes)} icon={DollarSign} />
+        <StatCard title="Contas a Receber" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.aReceber)} icon={TrendingUp} />
+        <StatCard title="Contas a Pagar" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.aPagar)} icon={TrendingDown} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -94,7 +125,7 @@ export default function Dashboard() {
           <CardHeader><CardTitle className="text-base">Financeiro Mensal</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={chartData}>
+              <BarChart data={stats.chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />

@@ -1,4 +1,9 @@
-import { useState, useCallback } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { useState, useCallback, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -9,8 +14,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer } from "lucide-react";
+import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, CheckCircle } from "lucide-react";
 import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
+import { usePecas } from "@/hooks/usePecas";
+import { useServicosCatalogo } from "@/hooks/useServicosCatalogo";
+import { useCreateConta } from "@/hooks/useContas";
+import { useAuth } from "@/contexts/AuthContext";
+const osSchema = z.object({
+  cliente_id: z.string().min(1, "Selecione um cliente"),
+  equipamento_id: z.string().optional().nullable(),
+  problema_relatado: z.string().optional(),
+  diagnostico: z.string().optional(),
+  servicos_realizados: z.string().optional(),
+  valor_mao_obra: z.number().min(0),
+  valor_pecas: z.number().min(0),
+  status: z.string(),
+  observacoes: z.string().optional(),
+  pecas: z.array(z.object({
+    peca_id: z.string(),
+    quantidade: z.number().min(1),
+    valor_unitario: z.number().min(0),
+  })).default([]),
+  servicos: z.array(z.object({
+    descricao: z.string().min(1),
+    quantidade: z.number().min(1),
+    valor_unitario: z.number().min(0),
+    servico_catalogo_id: z.string().optional(),
+  })).default([]),
+});
+
+type OSFormValues = z.infer<typeof osSchema>;
+
 import { useClientes } from "@/hooks/useClientes";
 
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
@@ -42,8 +76,11 @@ export default function OrdensServico() {
   const createOS = useCreateOS();
   const updateOS = useUpdateOS();
   const deleteOS = useDeleteOS();
-  
   const { data: empresa } = useEmpresaConfig();
+  const { role } = useAuth();
+  const { data: pecasData } = usePecas();
+  const { data: servicosCatalogo } = useServicosCatalogo();
+  const createConta = useCreateConta();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -51,9 +88,29 @@ export default function OrdensServico() {
   const [viewDialog, setViewDialog] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
   const [legendaUpload, setLegendaUpload] = useState("");
+
+  const form = useForm<OSFormValues>({
+    resolver: zodResolver(osSchema),
+    defaultValues: {
+      cliente_id: "", status: "aberto", valor_mao_obra: 0, valor_pecas: 0,
+      pecas: [], servicos: [],
+    },
+  });
+
+  const { fields: pecasFields, append: appendPeca, remove: removePeca } = useFieldArray({ control: form.control, name: "pecas" });
+  const { fields: servicosFields, append: appendServico, remove: removeServico } = useFieldArray({ control: form.control, name: "servicos" });
+
+  const watchPecas = form.watch("pecas");
+  const watchServicos = form.watch("servicos");
+
+  useEffect(() => {
+    const totalPecas = watchPecas.reduce((acc, p) => acc + (p.quantidade * p.valor_unitario), 0);
+    const totalServicos = watchServicos.reduce((acc, s) => acc + (s.quantidade * s.valor_unitario), 0);
+    form.setValue("valor_pecas", totalPecas);
+    form.setValue("valor_mao_obra", totalServicos);
+  }, [watchPecas, watchServicos, form]);
 
   const { data: fotosEdit } = useOSFotos(editing?.id);
   const { data: fotosView } = useOSFotos(viewing?.id);
@@ -61,28 +118,21 @@ export default function OrdensServico() {
   const deleteFoto = useDeleteOSFoto();
 
   const filtered = (ordens ?? []).filter(o => {
-    const matchSearch =
-      o.numero?.toLowerCase().includes(search.toLowerCase()) ||
-      (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = o.numero?.toLowerCase().includes(search.toLowerCase()) || (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const resetForm = useCallback(() => { setForm(emptyForm); setEditing(null); }, []);
-
-  const openCreate = useCallback(() => {
+  const resetForm = useCallback(() => {
+    form.reset({
+      cliente_id: "", status: "aberto", valor_mao_obra: 0, valor_pecas: 0,
+      pecas: [], servicos: [], problema_relatado: "", diagnostico: "", servicos_realizados: "", observacoes: "",
+    });
     setEditing(null);
-    setForm(emptyForm);
-    setDialogMode("create");
-    refetchClientes();
-  }, [refetchClientes]);
+  }, [form]);
 
-  const closeDialog = useCallback(() => {
-    setDialogMode(null);
-    setEditing(null);
-    setForm(emptyForm);
-    setLegendaUpload("");
-  }, []);
+  const openCreate = useCallback(() => { resetForm(); setDialogMode("create"); refetchClientes(); }, [refetchClientes, resetForm]);
+  const closeDialog = useCallback(() => { setDialogMode(null); resetForm(); }, [resetForm]);
 
   const handlePrint = async (o: any) => {
     let fotos: { url: string; legenda?: string | null }[] = [];
@@ -108,65 +158,82 @@ export default function OrdensServico() {
         await addFoto.mutateAsync({ ordem_servico_id: editing.id, url: data.publicUrl, legenda: legendaUpload || undefined });
         setLegendaUpload("");
         toast.success("Foto adicionada!");
-      } else {
-        setForm(f => ({ ...f, foto_url: data.publicUrl }));
-        toast.success("Foto enviada! Salve a OS e adicione mais fotos editando-a.");
       }
-    } catch (e: any) {
-      toast.error("Erro ao enviar foto: " + e.message);
-    } finally {
-      setUploading(false);
-    }
+    } catch (e: any) { toast.error("Erro ao enviar foto: " + e.message); } finally { setUploading(false); }
   };
 
+  const statusOrder = ["aberto", "em_analise", "aguardando_aprovacao", "em_manutencao", "finalizado", "entregue"];
 
-  const handleSave = () => {
-    if (!form.cliente_id) return;
+  const handleSave = form.handleSubmit(async (values) => {
+    const currentStatusIdx = editing ? statusOrder.indexOf(editing.status) : -1;
+    const newStatusIdx = statusOrder.indexOf(values.status);
+
+    if (editing && role !== "admin" && newStatusIdx < currentStatusIdx) {
+      toast.error("Apenas administradores podem retroceder o status.");
+      return;
+    }
+
+    if (values.status === "finalizado" || values.status === "entregue") {
+      if (!values.diagnostico || !values.servicos_realizados) {
+        toast.error("Diagnóstico e serviços realizados são obrigatórios para finalizar.");
+        return;
+      }
+    }
+
     if (editing) {
       const editingId = editing.id;
-      const payload = { ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) };
+      const isFinalizing = (values.status === "finalizado" || values.status === "entregue") && (editing.status !== "finalizado" && editing.status !== "entregue");
       closeDialog();
-      updateOS.mutate({ id: editingId, ...payload });
-    } else {
-      const formSnapshot = { ...form };
-      const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
-      closeDialog();
-      createOS.mutate({ ...formSnapshot, valor_mao_obra: Number(formSnapshot.valor_mao_obra), valor_pecas: Number(formSnapshot.valor_pecas) }, {
-        onSuccess: async (data) => {
-          if (data) {
-            if (formSnapshot.foto_url) {
-              try { await addFoto.mutateAsync({ ordem_servico_id: data.id, url: formSnapshot.foto_url, legenda: "Foto inicial" }); } catch {}
-            }
-            const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
-            printOS({
-              numero: data.numero, data: data.data_entrada, cliente: clienteNome,
-              problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
-              servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
-              valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
-              empresa, fotoUrl: (data as any).foto_url, fotos,
+      updateOS.mutate({ id: editingId, ...values } as any, {
+        onSuccess: (data) => {
+          if (isFinalizing) {
+            createConta.mutate({
+              descricao: `OS ${data.numero} - ${(data as any).clientes?.nome || "Cliente"}`,
+              valor: values.valor_mao_obra + values.valor_pecas,
+              vencimento: new Date().toISOString().split("T")[0],
+              tipo: "receber", categoria: "Serviços", status: "pendente",
+            });
+            values.pecas.forEach(async (p) => {
+              const peca = pecasData?.find(item => item.id === p.peca_id);
+              if (peca) await supabase.from("pecas").update({ quantidade: peca.quantidade - p.quantidade }).eq("id", p.peca_id);
             });
           }
+        }
+      });
+    } else {
+      const clienteNome = clientes?.find(c => c.id === values.cliente_id)?.nome ?? "";
+      closeDialog();
+      createOS.mutate(values as any, {
+        onSuccess: async (data) => {
+          const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
+          printOS({
+            numero: data.numero, data: data.data_entrada, cliente: clienteNome,
+            problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
+            servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
+            valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
+            empresa, fotoUrl: (data as any).foto_url, fotos,
+          });
         },
       });
     }
-  };
+  });
 
   const handleEdit = useCallback((o: any) => {
     setEditing(null);
-    setForm(emptyForm);
     requestAnimationFrame(() => {
       setEditing(o);
-      setForm({
-        cliente_id: o.cliente_id, problema_relatado: o.problema_relatado ?? "",
-        diagnostico: o.diagnostico ?? "", servicos_realizados: o.servicos_realizados ?? "",
-        valor_mao_obra: o.valor_mao_obra ?? 0, valor_pecas: o.valor_pecas ?? 0,
-        status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
-        foto_url: o.foto_url ?? "",
+      form.reset({
+        cliente_id: o.cliente_id, equipamento_id: o.equipamento_id,
+        problema_relatado: o.problema_relatado ?? "", diagnostico: o.diagnostico ?? "",
+        servicos_realizados: o.servicos_realizados ?? "", valor_mao_obra: o.valor_mao_obra ?? 0,
+        valor_pecas: o.valor_pecas ?? 0, status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
+        pecas: (o.os_pecas || []).map((p: any) => ({ peca_id: p.peca_id, quantidade: p.quantidade, valor_unitario: p.valor_unitario })),
+        servicos: (o.os_servicos || []).map((s: any) => ({ descricao: s.descricao, quantidade: s.quantidade, valor_unitario: s.valor_unitario, servico_catalogo_id: s.servico_catalogo_id })),
       });
       setDialogMode("edit");
       refetchClientes();
     });
-  }, [refetchClientes]);
+  }, [refetchClientes, form]);
 
   const isSaving = createOS.isPending || updateOS.isPending;
 
@@ -179,74 +246,113 @@ export default function OrdensServico() {
       <Dialog open={dialogMode !== null} onOpenChange={(o) => { if (!o) closeDialog(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar OS" : "Nova Ordem de Serviço"}</DialogTitle></DialogHeader>
-            <div className="grid gap-4 py-2">
-              <div className="grid gap-2">
-                <Label>Cliente *</Label>
-                <Select value={form.cliente_id || undefined} onValueChange={v => setForm(f => ({ ...f, cliente_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                  <SelectContent>
-                    {(clientes ?? []).filter(c => c?.id).length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente cadastrado</div>
-                    ) : (
-                      (clientes ?? []).filter(c => c?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2"><Label>Problema Relatado</Label><Textarea value={form.problema_relatado} onChange={e => setForm(f => ({ ...f, problema_relatado: e.target.value }))} /></div>
-              <div className="grid gap-2"><Label>Diagnóstico</Label><Textarea value={form.diagnostico} onChange={e => setForm(f => ({ ...f, diagnostico: e.target.value }))} /></div>
-              <div className="grid gap-2"><Label>Serviços Realizados</Label><Textarea value={form.servicos_realizados} onChange={e => setForm(f => ({ ...f, servicos_realizados: e.target.value }))} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2"><Label>Mão de Obra (R$)</Label><Input type="number" value={form.valor_mao_obra} onChange={e => setForm(f => ({ ...f, valor_mao_obra: Number(e.target.value) }))} /></div>
-                <div className="grid gap-2"><Label>Peças (R$)</Label><Input type="number" value={form.valor_pecas} onChange={e => setForm(f => ({ ...f, valor_pecas: Number(e.target.value) }))} /></div>
-              </div>
-              <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
-              <div className="grid gap-2">
-                <Label>Fotos Anexas (saem na impressão)</Label>
-                {editing && (
-                  <Input
-                    placeholder="Legenda (ex: Antes, Depois)"
-                    value={legendaUpload}
-                    onChange={e => setLegendaUpload(e.target.value)}
-                  />
-                )}
-                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) { handleUpload(f); e.target.value = ""; } }} />
-                {uploading && <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Enviando...</p>}
-                {!editing && form.foto_url && (
-                  <div className="relative">
-                    <img src={form.foto_url} alt="Foto OS" className="max-h-40 rounded border" />
-                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm(f => ({ ...f, foto_url: "" }))}>Remover foto</Button>
+            <Form {...form}>
+              <form onSubmit={handleSave} className="grid gap-4 py-2">
+                <FormField control={form.control} name="cliente_id" render={({ field }) => (
+                  <FormItem><FormLabel>Cliente *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="status" render={({ field }) => (
+                  <FormItem><FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>{statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                    </Select><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="problema_relatado" render={({ field }) => (
+                  <FormItem><FormLabel>Problema Relatado</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="diagnostico" render={({ field }) => (
+                  <FormItem><FormLabel>Diagnóstico</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="servicos_realizados" render={({ field }) => (
+                  <FormItem><FormLabel>Serviços Realizados (Resumo)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+
+                <div className="border rounded-md p-3 space-y-3">
+                  <div className="flex items-center justify-between"><Label className="text-sm font-bold">Serviços Detalhados</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendServico({ descricao: "", quantidade: 1, valor_unitario: 0 })}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
                   </div>
-                )}
-                {editing && fotosEdit && fotosEdit.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {fotosEdit.map(f => (
-                      <div key={f.id} className="relative border rounded p-1">
-                        <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-28 object-cover rounded" />
-                        {f.legenda && <p className="text-xs text-center mt-1 text-muted-foreground">{f.legenda}</p>}
-                        <Button type="button" variant="destructive" size="sm" className="w-full mt-1 h-7" onClick={() => deleteFoto.mutate({ id: f.id, ordem_servico_id: editing.id })}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
+                  {servicosFields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-[1fr_60px_80px_30px] gap-2 items-end">
+                      <Input placeholder="Descrição" {...form.register(`servicos.${index}.descricao` as const)} />
+                      <Input type="number" placeholder="Qtd" {...form.register(`servicos.${index}.quantidade` as const, { valueAsNumber: true })} />
+                      <Input type="number" placeholder="R$" {...form.register(`servicos.${index}.valor_unitario` as const, { valueAsNumber: true })} />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeServico(index)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border rounded-md p-3 space-y-3">
+                  <div className="flex items-center justify-between"><Label className="text-sm font-bold">Peças Utilizadas</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendPeca({ peca_id: "", quantidade: 1, valor_unitario: 0 })}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
                   </div>
-                )}
-                {editing && (!fotosEdit || fotosEdit.length === 0) && (
-                  <p className="text-xs text-muted-foreground">Nenhuma foto anexa. Adicione quantas quiser (ex: antes/depois).</p>
-                )}
-              </div>
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editing ? "Salvar" : "Criar e Imprimir OS"}
-              </Button>
-            </div>
+                  {pecasFields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-[1fr_60px_80px_30px] gap-2 items-end">
+                      <Select onValueChange={(v) => {
+                        const p = pecasData?.find(item => item.id === v);
+                        if (p) {
+                          form.setValue(`pecas.${index}.peca_id`, v);
+                          form.setValue(`pecas.${index}.valor_unitario`, p.valor_venda);
+                        }
+                      }} defaultValue={field.peca_id}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Peça" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {(pecasData ?? []).map(p => <SelectItem key={p.id} value={p.id}>{p.nome} (Estoque: {p.quantidade})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Input type="number" placeholder="Qtd" {...form.register(`pecas.${index}.quantidade` as const, { valueAsNumber: true })} />
+                      <Input type="number" placeholder="R$" {...form.register(`pecas.${index}.valor_unitario` as const, { valueAsNumber: true })} />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removePeca(index)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="valor_mao_obra" render={({ field }) => (
+                    <FormItem><FormLabel>Mão de Obra (R$)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="valor_pecas" render={({ field }) => (
+                    <FormItem><FormLabel>Peças (R$)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+
+                <FormField control={form.control} name="observacoes" render={({ field }) => (
+                  <FormItem><FormLabel>Observações</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+
+                <div className="grid gap-2">
+                  <Label>Fotos Anexas</Label>
+                  {editing && (
+                    <div className="flex gap-2">
+                      <Input placeholder="Legenda" value={legendaUpload} onChange={e => setLegendaUpload(e.target.value)} className="flex-1" />
+                      <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) { handleUpload(f); e.target.value = ""; } }} className="flex-1" />
+                    </div>
+                  )}
+                  {uploading && <p className="text-xs text-muted-foreground animate-pulse">Enviando...</p>}
+                  {editing && fotosEdit && fotosEdit.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {fotosEdit.map(f => (
+                        <div key={f.id} className="relative border rounded p-1">
+                          <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-24 object-cover rounded" />
+                          <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => deleteFoto.mutate({ id: f.id, ordem_servico_id: editing.id })}><Trash2 className="w-3 h-3" /></Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editing ? "Salvar" : "Criar e Imprimir OS"}
+                </Button>
+              </form>
+            </Form>
         </DialogContent>
       </Dialog>
 
@@ -293,7 +399,18 @@ export default function OrdensServico() {
                           <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => { setViewing(o); setViewDialog(true); }}><Eye className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteOS.mutate(o.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir a OS {o.numero}?</AlertDialogDescription></AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteOS.mutate(o.id)} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>

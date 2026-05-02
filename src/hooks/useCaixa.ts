@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useCaixaAberto() {
@@ -9,6 +9,7 @@ export function useCaixaAberto() {
   return useQuery({
     queryKey: ["caixa_aberto", empresaId],
     enabled: !!empresaId,
+    staleTime: 10000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("caixas")
@@ -28,6 +29,7 @@ export function useCaixas() {
   return useQuery({
     queryKey: ["caixas", empresaId],
     enabled: !!empresaId,
+    staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("caixas")

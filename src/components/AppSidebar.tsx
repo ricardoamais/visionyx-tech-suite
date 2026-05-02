@@ -33,21 +33,15 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { signOut, user } = useAuth();
+  const { signOut, user, role } = useAuth();
   const isActive = (path: string) => location.pathname === path;
+  const isAdmin = role === "admin";
 
-  const { data: isAdmin } = useQuery({
-    queryKey: ["is_admin", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user!.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      return !!data;
-    },
+  const filteredManagementItems = managementItems.filter(item => {
+    if (!isAdmin) {
+      return !["Financeiro", "Configurações"].includes(item.title);
+    }
+    return true;
   });
 
   return (
@@ -89,7 +83,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/40 text-[11px] uppercase tracking-wider">Gestão</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {managementItems.map((item) => (
+              {filteredManagementItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url}>
