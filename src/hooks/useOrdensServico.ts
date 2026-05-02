@@ -12,7 +12,7 @@ export function useOrdensServico() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_servico")
-        .select("*, clientes(nome), equipamentos(tipo, marca, modelo)")
+        .select("*, clientes(nome), equipamentos(tipo, marca, modelo), os_pecas(*, pecas(nome)), os_servicos(*)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
