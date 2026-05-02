@@ -132,7 +132,7 @@ export default function Configuracoes() {
    const description = empresa ? `Mensalidade Visionyx - ${empresa.name} - ${format(new Date(), 'MM/yyyy')}` : '';
     const pixPayload = settings && empresa && amount > 0 ? generatePixPayload({
       pixKey: settings.pix_key,
-      merchantName: settings.pix_name || settings.owner_name || 'Visionyx',
+     merchantName: settings.pix_name || 'Visionyx',
       merchantCity: "SAO PAULO",
       amount: amount,
       description: description
