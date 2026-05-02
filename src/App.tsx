@@ -37,6 +37,13 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   return <EmpresaProvider><EmpresaGate>{children}</EmpresaGate></EmpresaProvider>;
 };
 
+const AdminRoute = ({ children }: { children: ReactNode }) => {
+  const { role, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (role !== "admin") return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
 const EmpresaGate = ({ children }: { children: ReactNode }) => {
   const { loading } = useEmpresa();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -66,11 +73,11 @@ const App = () => (
                 <Route path="/equipamentos" element={<Equipamentos />} />
                 <Route path="/ordens" element={<OrdensServico />} />
                 <Route path="/orcamentos" element={<Orcamentos />} />
-                <Route path="/financeiro" element={<Financeiro />} />
+                <Route path="/financeiro" element={<AdminRoute><Financeiro /></AdminRoute>} />
                 <Route path="/estoque" element={<Estoque />} />
                 <Route path="/relatorios" element={<Relatorios />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/gerenciar" element={<Gerenciar />} />
+                <Route path="/configuracoes" element={<AdminRoute><Configuracoes /></AdminRoute>} />
+                <Route path="/gerenciar" element={<AdminRoute><Gerenciar /></AdminRoute>} />
                 <Route path="/caixa" element={<Caixa />} />
               </Route>
               <Route path="*" element={<NotFound />} />
