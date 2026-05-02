@@ -1,4 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -9,8 +13,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer } from "lucide-react";
+import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, CheckCircle } from "lucide-react";
 import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
+import { usePecas } from "@/hooks/usePecas";
+import { useServicosCatalogo } from "@/hooks/useServicosCatalogo";
+import { useCreateConta } from "@/hooks/useContas";
+import { useAuth } from "@/contexts/AuthContext";
+const osSchema = z.object({
+  cliente_id: z.string().min(1, "Selecione um cliente"),
+  equipamento_id: z.string().optional().nullable(),
+  problema_relatado: z.string().optional(),
+  diagnostico: z.string().optional(),
+  servicos_realizados: z.string().optional(),
+  valor_mao_obra: z.number().min(0),
+  valor_pecas: z.number().min(0),
+  status: z.string(),
+  observacoes: z.string().optional(),
+  pecas: z.array(z.object({
+    peca_id: z.string(),
+    quantidade: z.number().min(1),
+    valor_unitario: z.number().min(0),
+  })).default([]),
+  servicos: z.array(z.object({
+    descricao: z.string().min(1),
+    quantidade: z.number().min(1),
+    valor_unitario: z.number().min(0),
+    servico_catalogo_id: z.string().optional(),
+  })).default([]),
+});
+
+type OSFormValues = z.infer<typeof osSchema>;
+
 import { useClientes } from "@/hooks/useClientes";
 
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
