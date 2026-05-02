@@ -130,7 +130,8 @@ export default function Configuracoes() {
  
          <TabsContent value="geral" className="space-y-6">
            <div className="grid gap-6 max-w-2xl">
-          <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
+             <Card className="glass-card">
+               <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
           <CardContent className="grid gap-4">
             {isLoading ? (
               <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
