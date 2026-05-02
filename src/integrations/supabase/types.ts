@@ -119,8 +119,10 @@ export type Database = {
           is_active: boolean | null
           logo_url: string | null
           name: string
+          payment_status: string | null
           phone: string | null
           plan: string | null
+          plan_expires_at: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -133,8 +135,10 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name: string
+          payment_status?: string | null
           phone?: string | null
           plan?: string | null
+          plan_expires_at?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -147,8 +151,10 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          payment_status?: string | null
           phone?: string | null
           plan?: string | null
+          plan_expires_at?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -680,6 +686,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          id: string
+          pix_key: string
+          pix_name: string
+          price_enterprise: number | null
+          price_free: number | null
+          price_pro: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          pix_key: string
+          pix_name: string
+          price_enterprise?: number | null
+          price_free?: number | null
+          price_pro?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          pix_key?: string
+          pix_name?: string
+          price_enterprise?: number | null
+          price_free?: number | null
+          price_pro?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
