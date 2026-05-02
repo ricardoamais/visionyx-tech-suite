@@ -16,6 +16,7 @@ Deno.serve(async (req) => {
 
   let createdUserId: string | null = null;
   let createdCompanyId: string | null = null;
+  let reusedExistingUser = false;
 
   try {
     const { ownerName, companyName, cnpj, email, password } = await req.json();
@@ -32,9 +33,41 @@ Deno.serve(async (req) => {
       user_metadata: { name: ownerName }
     });
 
-    if (authError) throw authError;
-    if (!authData.user) throw new Error("Falha ao criar usuário");
-    createdUserId = authData.user.id;
+    if (authError) {
+      // Se o email já existe, tenta recuperar onboarding incompleto
+      const msg = (authError.message || "").toLowerCase();
+      if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+        const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers();
+        if (listErr) throw listErr;
+        const existing = list.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+        if (!existing) throw authError;
+
+        // Verifica se já tem empresa vinculada
+        const { data: existingProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("company_id")
+          .eq("user_id", existing.id)
+          .maybeSingle();
+
+        if (existingProfile?.company_id) {
+          throw new Error("Este e-mail já está cadastrado. Tente fazer login.");
+        }
+
+        // Reutiliza usuário órfão e atualiza a senha
+        await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+          password,
+          email_confirm: true,
+          user_metadata: { name: ownerName }
+        });
+        createdUserId = existing.id;
+        reusedExistingUser = true;
+      } else {
+        throw authError;
+      }
+    } else {
+      if (!authData.user) throw new Error("Falha ao criar usuário");
+      createdUserId = authData.user.id;
+    }
 
     // 2. Criar a empresa
     const { data: companyData, error: companyError } = await supabaseAdmin
@@ -52,18 +85,19 @@ Deno.serve(async (req) => {
     if (companyError) throw companyError;
     createdCompanyId = companyData.id;
 
-    // 3. Criar o perfil do usuário
+    // 3. Criar/atualizar o perfil do usuário (upsert por user_id)
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .insert({
+      .upsert({
         user_id: createdUserId,
         company_id: createdCompanyId,
         nome: ownerName
-      });
+      }, { onConflict: "user_id" });
 
     if (profileError) throw profileError;
 
-    // 4. Vincular papel de admin (user_roles table)
+    // 4. Vincular papel de admin (remove papéis antigos para evitar duplicatas)
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", createdUserId);
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .insert({
@@ -82,13 +116,12 @@ Deno.serve(async (req) => {
   } catch (error: any) {
     console.error("Erro no onboarding:", error.message);
     
-    // Rollback manual
-    if (createdUserId) {
-      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
-    }
-    
+    // Rollback manual (não apaga usuários reutilizados)
     if (createdCompanyId) {
       await supabaseAdmin.from("companies").delete().eq("id", createdCompanyId);
+    }
+    if (createdUserId && !reusedExistingUser) {
+      await supabaseAdmin.auth.admin.deleteUser(createdUserId);
     }
 
     let errorMessage = error.message;
