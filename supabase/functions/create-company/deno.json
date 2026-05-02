@@ -1,0 +1,7 @@
+{
+  "importMap": {
+    "imports": {
+      "https://esm.sh/@supabase/supabase-js@2.49.4": "https://esm.sh/@supabase/supabase-js@2.49.4"
+    }
+  }
+}
