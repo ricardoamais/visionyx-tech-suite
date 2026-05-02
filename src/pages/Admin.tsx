@@ -193,11 +193,11 @@ export default function Admin() {
                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Plano Free</CardTitle><CreditCard className="w-4 h-4 text-muted-foreground" /></CardHeader>
                <CardContent><div className="text-2xl font-bold">{stats.free}</div></CardContent>
              </Card>
-             <Card className="glass-card">
-               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pro/Enterprise</CardTitle><CreditCard className="w-4 h-4 text-primary" /></CardHeader>
-               <CardContent><div className="text-2xl font-bold">{stats.premium}</div></CardContent>
-             </div>
-           </div>
+              <Card className="glass-card">
+                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pro/Enterprise</CardTitle><CreditCard className="w-4 h-4 text-primary" /></CardHeader>
+                <CardContent><div className="text-2xl font-bold">{stats.premium}</div></CardContent>
+              </Card>
+            </div>
  
            <Card className="glass-card">
              <CardHeader className="flex flex-row items-center justify-between">
