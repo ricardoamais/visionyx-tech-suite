@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, ArrowRight, CheckCircle } from "lucide-react";
 import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento, useDeleteOrcamento } from "@/hooks/useOrcamentos";
+import { useCreateOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
@@ -21,7 +26,32 @@ const statusMap: Record<string, string> = { pendente: "Pendente", aprovado: "Apr
 
 const emptyItem = { descricao: "", quantidade: 1, valor_unitario: 0 };
 
+const orcamentoSchema = z.object({
+  cliente_id: z.string().min(1, "Selecione um cliente"),
+  observacoes: z.string().optional(),
+  status: z.enum(["pendente", "aprovado", "reprovado"]),
+  itens: z.array(z.object({
+    descricao: z.string().min(1, "Descrição obrigatória"),
+    quantidade: z.number().min(1),
+    valor_unitario: z.number().min(0),
+  })).min(1, "Adicione pelo menos um item"),
+});
+
+type OrcamentoFormValues = z.infer<typeof orcamentoSchema>;
+
 export default function Orcamentos() {
+  const createOS = useCreateOS();
+
+  const form = useForm<OrcamentoFormValues>({
+    resolver: zodResolver(orcamentoSchema),
+    defaultValues: { cliente_id: "", observacoes: "", status: "pendente", itens: [{ descricao: "", quantidade: 1, valor_unitario: 0 }] },
+  });
+
+  const { fields: itensFields, append, remove } = useFieldArray({ control: form.control, name: "itens" });
+
+  const watchItens = form.watch("itens");
+  const valorTotal = watchItens?.reduce((s, i) => s + (i.quantidade || 0) * (i.valor_unitario || 0), 0) || 0;
+
   const { data: orcamentos, isLoading } = useOrcamentos();
   const { data: clientes, refetch: refetchClientes } = useClientes();
   const createOrc = useCreateOrcamento();
@@ -43,7 +73,10 @@ export default function Orcamentos() {
     (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const resetForm = () => { setForm({ cliente_id: "", observacoes: "", status: "pendente" }); setItens([{ ...emptyItem }]); setEditing(null); };
+  const resetForm = useCallback(() => {
+    form.reset({ cliente_id: "", observacoes: "", status: "pendente", itens: [{ descricao: "", quantidade: 1, valor_unitario: 0 }] });
+    setEditing(null);
+  }, [form]);
 
   const valorTotal = itens.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0);
 
@@ -76,28 +109,46 @@ export default function Orcamentos() {
     });
   };
 
-  const handleSave = () => {
-    if (!form.cliente_id || itens.every(i => !i.descricao)) return;
-    const validItens = itens.filter(i => i.descricao.trim());
+  const handleGenerateOS = (o: any) => {
+    if (o.status !== "aprovado") { toast.error("Apenas orçamentos aprovados podem gerar OS."); return; }
+    createOS.mutate({
+      cliente_id: o.cliente_id,
+      problema_relatado: "Gerado a partir do Orçamento " + o.numero,
+      observacoes: o.observacoes,
+      status: "aberto",
+      servicos: (o.orcamento_itens || []).map((i: any) => ({
+        descricao: i.descricao, quantidade: i.quantidade, valor_unitario: i.valor_unitario
+      })),
+      valor_mao_obra: Number(o.valor_total),
+      valor_pecas: 0,
+    }, {
+      onSuccess: () => {
+        toast.success("Ordem de Serviço gerada com sucesso!");
+      }
+    });
+  };
+
+  const handleSave = form.handleSubmit((values) => {
     if (editing) {
-      updateOrc.mutate({ id: editing.id, cliente_id: form.cliente_id, observacoes: form.observacoes, status: form.status as "pendente" | "aprovado" | "reprovado", valor_total: valorTotal }, {
+      if (editing.status === "aprovado") { toast.error("Orçamentos aprovados não podem ser editados."); return; }
+      updateOrc.mutate({ id: editing.id, ...values, valor_total: valorTotal } as any, {
         onSuccess: () => { setDialogOpen(false); resetForm(); },
       });
     } else {
-      createOrc.mutate({ ...form, itens: validItens }, {
+      createOrc.mutate(values as any, {
         onSuccess: (data) => {
           setDialogOpen(false);
-          const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
+          const clienteNome = clientes?.find(c => c.id === values.cliente_id)?.nome ?? "";
           printOrcamento({
             numero: data.numero, data: data.created_at, cliente: clienteNome,
-            itens: validItens, valorTotal, status: statusMap[data.status] ?? data.status,
+            itens: values.itens, valorTotal, status: statusMap[data.status] ?? data.status,
             observacoes: data.observacoes ?? undefined, empresa,
           });
           resetForm();
         },
       });
     }
-  };
+  });
 
   const handleEdit = (o: any) => {
     setEditing(null);
