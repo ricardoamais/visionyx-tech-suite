@@ -1,8 +1,9 @@
 import { 
   LayoutDashboard, Users, Monitor, ClipboardList, FileText, 
-  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, 
-  ShieldCheck, ShoppingCart, Building2, ShieldAlert
+   DollarSign, Package, BarChart3, Settings, LogOut, Wrench,
+   ShieldCheck, ShoppingCart, Building2, ShieldAlert, Sun, Moon
 } from "lucide-react";
+ import { useTheme } from "next-themes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +38,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { signOut, user, role, isSuperAdmin } = useAuth();
   const { company } = useEmpresa();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const isActive = (path: string) => location.pathname === path;
   const isAdmin = role === "admin";
 
@@ -129,16 +131,33 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-3 border-t border-sidebar-border">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut}>
-              <LogOut className="w-4 h-4" />
-              {!collapsed && <span>Sair</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+       <SidebarFooter className="p-3 border-t border-sidebar-border space-y-1">
+         <SidebarMenu>
+           <SidebarMenuItem>
+             <SidebarMenuButton
+               onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+               tooltip={collapsed ? (resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro") : undefined}
+             >
+               {resolvedTheme === "dark" ? (
+                 <Sun className="w-4 h-4 transition-all" />
+               ) : (
+                 <Moon className="w-4 h-4 transition-all" />
+               )}
+               {!collapsed && <span>{resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>}
+             </SidebarMenuButton>
+           </SidebarMenuItem>
+           <SidebarMenuItem>
+             <SidebarMenuButton 
+               onClick={signOut}
+               className="text-destructive hover:text-destructive hover:bg-destructive/10"
+               tooltip={collapsed ? "Sair" : undefined}
+             >
+               <LogOut className="w-4 h-4" />
+               {!collapsed && <span>Sair</span>}
+             </SidebarMenuButton>
+           </SidebarMenuItem>
+         </SidebarMenu>
+       </SidebarFooter>
     </Sidebar>
   );
 }
