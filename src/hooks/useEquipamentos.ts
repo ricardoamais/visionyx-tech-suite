@@ -18,26 +18,6 @@ export function useEquipamentos(clienteId?: string) {
     },
   });
 }
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useEmpresa } from "@/contexts/EmpresaContext";
-import { toast } from "sonner";
-
-export function useEquipamentos() {
-  const { empresaId } = useEmpresa();
-  return useQuery({
-    queryKey: ["equipamentos", empresaId],
-    enabled: !!empresaId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("equipamentos")
-        .select("*, clientes(nome)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-}
 
 export function useCreateEquipamento() {
   const qc = useQueryClient();
