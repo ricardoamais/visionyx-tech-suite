@@ -17,6 +17,8 @@ export function BillingManager() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pixPayload, setPixPayload] = useState('');
+  const [loadingPix, setLoadingPix] = useState(false);
 
   const { data: company, isLoading: loadingCompany } = useQuery({
     queryKey: ["current_company", user?.id],
@@ -63,6 +65,35 @@ export function BillingManager() {
     }
   }, [company]);
 
+  const planAmount = (() => {
+    if (!company || !settings) return 0;
+    const plan = (company.plan || 'free').toLowerCase();
+    if (plan === 'pro') return Number(settings.price_pro);
+    if (plan === 'enterprise') return Number(settings.price_enterprise);
+    return Number(settings.price_free);
+  })();
+
+  const pixDescription = company ? `Mensalidade Visionyx - ${company.name} - ${format(new Date(), 'MM/yyyy')}` : '';
+
+  useEffect(() => {
+    if (settings && company && planAmount > 0) {
+      setLoadingPix(true);
+      generatePix({
+        pixKey: settings.pix_key,
+        name: settings.pix_name || 'Visionyx',
+        city: "SAO PAULO",
+        amount: planAmount,
+        description: pixDescription
+      }).then(payload => {
+        setPixPayload(payload);
+        setLoadingPix(false);
+      }).catch(err => {
+        console.error(err);
+        setLoadingPix(false);
+      });
+    }
+  }, [settings, company, planAmount, pixDescription]);
+
   const markAsPendingMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -94,30 +125,8 @@ export function BillingManager() {
   };
 
   const amount = getPrice();
+  const description = `Mensalidade Visionyx - ${company?.name} - ${format(new Date(), 'MM/yyyy')}`;
   if (amount <= 0 && !isBlocked) return null;
-
-   const [pixPayload, setPixPayload] = useState('');
-   const [loadingPix, setLoadingPix] = useState(false);
-   const description = `Mensalidade Visionyx - ${company?.name} - ${format(new Date(), 'MM/yyyy')}`;
-
-   useEffect(() => {
-     if (settings && company && amount > 0) {
-       setLoadingPix(true);
-       generatePix({
-         pixKey: settings.pix_key,
-         name: settings.pix_name || 'Visionyx',
-         city: "SAO PAULO",
-         amount: amount,
-         description: description
-       }).then(payload => {
-         setPixPayload(payload);
-         setLoadingPix(false);
-       }).catch(err => {
-         console.error(err);
-         setLoadingPix(false);
-       });
-     }
-   }, [settings, company, amount, description]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(pixPayload);
