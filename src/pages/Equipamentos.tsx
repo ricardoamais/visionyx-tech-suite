@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import { useEquipamentos, useCreateEquipamento, useUpdateEquipamento, useDeleteEquipamento } from "@/hooks/useEquipamentos";
-import { useClientes } from "@/hooks/useClientes";
+ import { useClientes } from "@/hooks/useClientes";
+ import { QuickAddCliente } from "@/components/QuickAddCliente";
 
 const tipos = ["Notebook", "PC Desktop", "Impressora", "Monitor", "Tablet", "Celular", "Servidor", "Outro"];
 
@@ -133,19 +134,22 @@ export default function Equipamentos() {
               <div className="grid gap-2"><Label>Modelo</Label><Input value={form.modelo} onChange={e => setForm(f => ({ ...f, modelo: e.target.value }))} /></div>
               <div className="grid gap-2"><Label>Nº Série</Label><Input value={form.numero_serie} onChange={e => setForm(f => ({ ...f, numero_serie: e.target.value }))} /></div>
             </div>
-            <div className="grid gap-2">
-              <Label>Cliente *</Label>
-              <Select value={form.cliente_id || undefined} onValueChange={v => setForm(f => ({ ...f, cliente_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                <SelectContent>
-                  {clientes.filter(c => c?.id).length === 0 ? (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente cadastrado</div>
-                  ) : (
-                    clientes.filter(c => c?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+             <div className="grid gap-2">
+               <Label>Cliente *</Label>
+               <div className="flex gap-2">
+                 <Select value={form.cliente_id || undefined} onValueChange={v => setForm(f => ({ ...f, cliente_id: v }))}>
+                   <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+                   <SelectContent>
+                     {clientes.filter(c => c?.id).length === 0 ? (
+                       <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente cadastrado</div>
+                     ) : (
+                       clientes.filter(c => c?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
+                     )}
+                   </SelectContent>
+                 </Select>
+                 <QuickAddCliente onSuccess={(id) => setForm(f => ({ ...f, cliente_id: id }))} />
+               </div>
+             </div>
             <div className="grid gap-2"><Label>Acessórios</Label><Input value={form.acessorios} onChange={e => setForm(f => ({ ...f, acessorios: e.target.value }))} /></div>
             <div className="grid gap-2"><Label>Defeito Relatado</Label><Textarea value={form.defeito_relatado} onChange={e => setForm(f => ({ ...f, defeito_relatado: e.target.value }))} /></div>
             <div className="grid gap-2"><Label>Senha do Equipamento</Label><Input value={form.senha_equipamento} onChange={e => setForm(f => ({ ...f, senha_equipamento: e.target.value }))} /></div>

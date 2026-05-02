@@ -13,7 +13,8 @@ import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer } from "l
 import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useVendasCaixa, useCreateVenda } from "@/hooks/useCaixa";
 import { usePecas } from "@/hooks/usePecas";
 import { useClientes } from "@/hooks/useClientes";
-import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
+ import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
+ import { QuickAddCliente } from "@/components/QuickAddCliente";
 import { imprimirCupom } from "@/components/CupomVenda";
 import { format } from "date-fns";
 
@@ -257,19 +258,22 @@ export default function Caixa() {
           <DialogHeader><DialogTitle>Nova Venda</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Cliente (opcional)</Label>
-                <Select value={clienteId || undefined} onValueChange={(v) => setClienteId(v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    {clientesValidos.length === 0 ? (
-                      <SelectItem value="__empty" disabled>Nenhum cliente</SelectItem>
-                    ) : (
-                      clientesValidos.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+               <div>
+                 <Label>Cliente (opcional)</Label>
+                 <div className="flex gap-2">
+                   <Select value={clienteId || undefined} onValueChange={(v) => setClienteId(v)}>
+                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                     <SelectContent>
+                       {clientesValidos.length === 0 ? (
+                         <SelectItem value="__empty" disabled>Nenhum cliente</SelectItem>
+                       ) : (
+                         clientesValidos.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
+                       )}
+                     </SelectContent>
+                   </Select>
+                   <QuickAddCliente onSuccess={(id) => setClienteId(id)} />
+                 </div>
+               </div>
               <div>
                 <Label>Forma de Pagamento *</Label>
                 <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as any)}>
