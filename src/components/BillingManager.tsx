@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Copy, CheckCircle2, AlertTriangle, Lock } from "lucide-react";
 import { toast } from "sonner";
 import QRCode from "react-qr-code";
-import { generatePixPayload } from "@/utils/pix";
+ import { generatePix } from "@/utils/generatePix";
 import { format, differenceInDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -96,14 +96,28 @@ export function BillingManager() {
   const amount = getPrice();
   if (amount <= 0 && !isBlocked) return null;
 
-   const description = `Mensalidade Visionyx - ${company.name} - ${format(new Date(), 'MM/yyyy')}`;
-   const pixPayload = generatePixPayload({
-     pixKey: settings.pix_key,
-     merchantName: settings.pix_name || 'Visionyx',
-     merchantCity: "SAO PAULO",
-     amount: amount,
-     description: description
-   });
+   const [pixPayload, setPixPayload] = useState('');
+   const [loadingPix, setLoadingPix] = useState(false);
+   const description = `Mensalidade Visionyx - ${company?.name} - ${format(new Date(), 'MM/yyyy')}`;
+
+   useEffect(() => {
+     if (settings && company && amount > 0) {
+       setLoadingPix(true);
+       generatePix({
+         pixKey: settings.pix_key,
+         name: settings.pix_name || 'Visionyx',
+         city: "SAO PAULO",
+         amount: amount,
+         description: description
+       }).then(payload => {
+         setPixPayload(payload);
+         setLoadingPix(false);
+       }).catch(err => {
+         console.error(err);
+         setLoadingPix(false);
+       });
+     }
+   }, [settings, company, amount, description]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(pixPayload);
@@ -138,9 +152,15 @@ export function BillingManager() {
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded-lg inline-block mx-auto border-4 border-primary/10">
-            <QRCode value={pixPayload} size={200} />
-          </div>
+           {loadingPix ? (
+             <div className="w-[200px] h-[200px] bg-muted animate-pulse rounded-lg flex items-center justify-center mx-auto">
+               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+             </div>
+           ) : (
+             <div className="bg-white p-4 rounded-lg inline-block mx-auto border-4 border-primary/10">
+               <QRCode value={pixPayload} size={200} />
+             </div>
+           )}
 
           <div className="space-y-4">
             <div className="p-3 bg-muted rounded-lg text-sm font-mono break-all flex items-center gap-2">
@@ -178,9 +198,15 @@ export function BillingManager() {
             O vencimento é em {format(new Date(company.plan_expires_at), "dd 'de' MMMM", { locale: ptBR })}.
           </p>
 
-          <div className="bg-white p-3 rounded-lg inline-block mx-auto">
-            <QRCode value={pixPayload} size={180} />
-          </div>
+           {loadingPix ? (
+             <div className="w-[180px] h-[180px] bg-muted animate-pulse rounded-lg flex items-center justify-center mx-auto">
+               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+             </div>
+           ) : (
+             <div className="bg-white p-3 rounded-lg inline-block mx-auto">
+               <QRCode value={pixPayload} size={180} />
+             </div>
+           )}
 
           <div className="space-y-4 text-left">
              <div className="flex justify-between items-center text-sm">
