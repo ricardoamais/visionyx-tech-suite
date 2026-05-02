@@ -1,7 +1,7 @@
 import { 
   LayoutDashboard, Users, Monitor, ClipboardList, FileText, 
   DollarSign, Package, BarChart3, Settings, LogOut, Wrench, 
-  ShieldCheck, ShoppingCart, Building2 
+  ShieldCheck, ShoppingCart, Building2, ShieldAlert
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
