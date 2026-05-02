@@ -244,74 +244,113 @@ export default function OrdensServico() {
       <Dialog open={dialogMode !== null} onOpenChange={(o) => { if (!o) closeDialog(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Editar OS" : "Nova Ordem de Serviço"}</DialogTitle></DialogHeader>
-            <div className="grid gap-4 py-2">
-              <div className="grid gap-2">
-                <Label>Cliente *</Label>
-                <Select value={form.cliente_id || undefined} onValueChange={v => setForm(f => ({ ...f, cliente_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                  <SelectContent>
-                    {(clientes ?? []).filter(c => c?.id).length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente cadastrado</div>
-                    ) : (
-                      (clientes ?? []).filter(c => c?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2"><Label>Problema Relatado</Label><Textarea value={form.problema_relatado} onChange={e => setForm(f => ({ ...f, problema_relatado: e.target.value }))} /></div>
-              <div className="grid gap-2"><Label>Diagnóstico</Label><Textarea value={form.diagnostico} onChange={e => setForm(f => ({ ...f, diagnostico: e.target.value }))} /></div>
-              <div className="grid gap-2"><Label>Serviços Realizados</Label><Textarea value={form.servicos_realizados} onChange={e => setForm(f => ({ ...f, servicos_realizados: e.target.value }))} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2"><Label>Mão de Obra (R$)</Label><Input type="number" value={form.valor_mao_obra} onChange={e => setForm(f => ({ ...f, valor_mao_obra: Number(e.target.value) }))} /></div>
-                <div className="grid gap-2"><Label>Peças (R$)</Label><Input type="number" value={form.valor_pecas} onChange={e => setForm(f => ({ ...f, valor_pecas: Number(e.target.value) }))} /></div>
-              </div>
-              <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
-              <div className="grid gap-2">
-                <Label>Fotos Anexas (saem na impressão)</Label>
-                {editing && (
-                  <Input
-                    placeholder="Legenda (ex: Antes, Depois)"
-                    value={legendaUpload}
-                    onChange={e => setLegendaUpload(e.target.value)}
-                  />
-                )}
-                <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) { handleUpload(f); e.target.value = ""; } }} />
-                {uploading && <p className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Enviando...</p>}
-                {!editing && form.foto_url && (
-                  <div className="relative">
-                    <img src={form.foto_url} alt="Foto OS" className="max-h-40 rounded border" />
-                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setForm(f => ({ ...f, foto_url: "" }))}>Remover foto</Button>
+            <Form {...form}>
+              <form onSubmit={handleSave} className="grid gap-4 py-2">
+                <FormField control={form.control} name="cliente_id" render={({ field }) => (
+                  <FormItem><FormLabel>Cliente *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="status" render={({ field }) => (
+                  <FormItem><FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>{statusOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                    </Select><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="problema_relatado" render={({ field }) => (
+                  <FormItem><FormLabel>Problema Relatado</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="diagnostico" render={({ field }) => (
+                  <FormItem><FormLabel>Diagnóstico</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="servicos_realizados" render={({ field }) => (
+                  <FormItem><FormLabel>Serviços Realizados (Resumo)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+
+                <div className="border rounded-md p-3 space-y-3">
+                  <div className="flex items-center justify-between"><Label className="text-sm font-bold">Serviços Detalhados</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendServico({ descricao: "", quantidade: 1, valor_unitario: 0 })}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
                   </div>
-                )}
-                {editing && fotosEdit && fotosEdit.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {fotosEdit.map(f => (
-                      <div key={f.id} className="relative border rounded p-1">
-                        <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-28 object-cover rounded" />
-                        {f.legenda && <p className="text-xs text-center mt-1 text-muted-foreground">{f.legenda}</p>}
-                        <Button type="button" variant="destructive" size="sm" className="w-full mt-1 h-7" onClick={() => deleteFoto.mutate({ id: f.id, ordem_servico_id: editing.id })}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ))}
+                  {servicosFields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-[1fr_60px_80px_30px] gap-2 items-end">
+                      <Input placeholder="Descrição" {...form.register(`servicos.${index}.descricao` as const)} />
+                      <Input type="number" placeholder="Qtd" {...form.register(`servicos.${index}.quantidade` as const, { valueAsNumber: true })} />
+                      <Input type="number" placeholder="R$" {...form.register(`servicos.${index}.valor_unitario` as const, { valueAsNumber: true })} />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeServico(index)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border rounded-md p-3 space-y-3">
+                  <div className="flex items-center justify-between"><Label className="text-sm font-bold">Peças Utilizadas</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendPeca({ peca_id: "", quantidade: 1, valor_unitario: 0 })}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
                   </div>
-                )}
-                {editing && (!fotosEdit || fotosEdit.length === 0) && (
-                  <p className="text-xs text-muted-foreground">Nenhuma foto anexa. Adicione quantas quiser (ex: antes/depois).</p>
-                )}
-              </div>
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editing ? "Salvar" : "Criar e Imprimir OS"}
-              </Button>
-            </div>
+                  {pecasFields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-[1fr_60px_80px_30px] gap-2 items-end">
+                      <Select onValueChange={(v) => {
+                        const p = pecasData?.find(item => item.id === v);
+                        if (p) {
+                          form.setValue(`pecas.${index}.peca_id`, v);
+                          form.setValue(`pecas.${index}.valor_unitario`, p.valor_venda);
+                        }
+                      }} defaultValue={field.peca_id}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Peça" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {(pecasData ?? []).map(p => <SelectItem key={p.id} value={p.id}>{p.nome} (Estoque: {p.quantidade})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Input type="number" placeholder="Qtd" {...form.register(`pecas.${index}.quantidade` as const, { valueAsNumber: true })} />
+                      <Input type="number" placeholder="R$" {...form.register(`pecas.${index}.valor_unitario` as const, { valueAsNumber: true })} />
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removePeca(index)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="valor_mao_obra" render={({ field }) => (
+                    <FormItem><FormLabel>Mão de Obra (R$)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="valor_pecas" render={({ field }) => (
+                    <FormItem><FormLabel>Peças (R$)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
+
+                <FormField control={form.control} name="observacoes" render={({ field }) => (
+                  <FormItem><FormLabel>Observações</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+
+                <div className="grid gap-2">
+                  <Label>Fotos Anexas</Label>
+                  {editing && (
+                    <div className="flex gap-2">
+                      <Input placeholder="Legenda" value={legendaUpload} onChange={e => setLegendaUpload(e.target.value)} className="flex-1" />
+                      <Input type="file" accept="image/*" disabled={uploading} onChange={e => { const f = e.target.files?.[0]; if (f) { handleUpload(f); e.target.value = ""; } }} className="flex-1" />
+                    </div>
+                  )}
+                  {uploading && <p className="text-xs text-muted-foreground animate-pulse">Enviando...</p>}
+                  {editing && fotosEdit && fotosEdit.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {fotosEdit.map(f => (
+                        <div key={f.id} className="relative border rounded p-1">
+                          <img src={f.url} alt={f.legenda ?? "Foto"} className="w-full h-24 object-cover rounded" />
+                          <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => deleteFoto.mutate({ id: f.id, ordem_servico_id: editing.id })}><Trash2 className="w-3 h-3" /></Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editing ? "Salvar" : "Criar e Imprimir OS"}
+                </Button>
+              </form>
+            </Form>
         </DialogContent>
       </Dialog>
 
