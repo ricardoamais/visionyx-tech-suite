@@ -19,10 +19,10 @@ const statusMap: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   const { data: stats, isLoading } = useQuery({
-    queryKey: ["dashboard-stats", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["dashboard-stats", companyId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       const now = new Date();
@@ -37,16 +37,16 @@ export default function Dashboard() {
         supabase
           .from("ordens_servico")
           .select("id, status, numero, created_at, clientes(nome)")
-          .eq("empresa_id", empresaId)
+          .eq("company_id", companyId)
           .order("created_at", { ascending: false }),
         supabase
           .from("orcamentos")
           .select("id, status")
-          .eq("empresa_id", empresaId),
+          .eq("company_id", companyId),
         supabase
           .from("contas")
           .select("id, tipo, valor, status, vencimento, created_at")
-          .eq("empresa_id", empresaId)
+          .eq("company_id", companyId)
           .gte("created_at", sixMonthsAgo.toISOString()),
       ]);
       const os = osRes.data || [];

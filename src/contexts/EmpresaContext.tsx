@@ -4,11 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmpresaContextType {
-  empresaId: string | null;
+  companyId: string | null;
   loading: boolean;
 }
 
-const EmpresaContext = createContext<EmpresaContextType>({ empresaId: null, loading: true });
+const EmpresaContext = createContext<EmpresaContextType>({ companyId: null, loading: true });
 
 export const useEmpresa = () => useContext(EmpresaContext);
 
@@ -16,17 +16,17 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["empresa_usuario", user?.id],
+    queryKey: ["company_user", user?.id],
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("empresa_usuarios")
-        .select("empresa_id")
+        .from("profiles")
+        .select("company_id")
         .eq("user_id", user!.id)
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data?.empresa_id ?? null;
+      return data?.company_id ?? null;
     },
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
@@ -35,7 +35,7 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
   });
 
   return (
-    <EmpresaContext.Provider value={{ empresaId: data ?? null, loading: isLoading }}>
+    <EmpresaContext.Provider value={{ companyId: data ?? null, loading: isLoading }}>
       {children}
     </EmpresaContext.Provider>
   );

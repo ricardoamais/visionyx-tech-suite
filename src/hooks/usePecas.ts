@@ -4,10 +4,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function usePecas() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["pecas", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["pecas", companyId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase.from("pecas").select("*").order("nome");
@@ -19,11 +19,11 @@ export function usePecas() {
 
 export function useCreatePeca() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: { nome: string; quantidade?: number; valor_compra?: number; valor_venda?: number; estoque_minimo?: number }) => {
-      if (!empresaId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase.from("pecas").insert({ ...input, empresa_id: empresaId }).select().single();
+      if (!companyId) throw new Error("Empresa não definida");
+      const { data, error } = await supabase.from("pecas").insert({ ...input, company_id: companyId }).select().single();
       if (error) throw error;
       return data;
     },

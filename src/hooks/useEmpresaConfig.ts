@@ -4,15 +4,14 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useEmpresaConfig() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["empresa_config", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["company_config", companyId],
+    enabled: !!companyId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("empresas")
+        .from("companies")
         .select("*")
-        .eq("id", empresaId!)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -23,13 +22,13 @@ export function useEmpresaConfig() {
 
 export function useUpdateEmpresaConfig() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       id: string;
-      nome?: string;
-      cnpj?: string | null;
-      telefone?: string | null;
+      name?: string;
+      document?: string | null;
+      phone?: string | null;
       email?: string | null;
       endereco?: string | null;
       whatsapp?: string | null;
@@ -37,7 +36,7 @@ export function useUpdateEmpresaConfig() {
     }) => {
       const { id, ...rest } = input;
       const { data, error } = await supabase
-        .from("empresas")
+        .from("companies")
         .update(rest)
         .eq("id", id)
         .select("*");

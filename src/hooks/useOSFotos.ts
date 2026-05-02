@@ -21,13 +21,13 @@ export function useOSFotos(osId?: string | null) {
 
 export function useAddOSFoto() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: { ordem_servico_id: string; url: string; legenda?: string }) => {
-      if (!empresaId) throw new Error("Empresa não definida");
+      if (!companyId) throw new Error("Empresa não definida");
       const { data, error } = await supabase
         .from("os_fotos")
-        .insert({ ...input, empresa_id: empresaId })
+        .insert({ ...input, company_id: companyId })
         .select()
         .single();
       if (error) throw error;

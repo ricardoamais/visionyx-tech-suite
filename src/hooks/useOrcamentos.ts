@@ -4,10 +4,10 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useOrcamentos() {
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useQuery({
-    queryKey: ["orcamentos", empresaId],
-    enabled: !!empresaId,
+    queryKey: ["orcamentos", companyId],
+    enabled: !!companyId,
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -22,7 +22,7 @@ export function useOrcamentos() {
 
 export function useCreateOrcamento() {
   const qc = useQueryClient();
-  const { empresaId } = useEmpresa();
+  const { companyId } = useEmpresa();
   return useMutation({
     mutationFn: async (input: {
       cliente_id: string;
@@ -30,12 +30,12 @@ export function useCreateOrcamento() {
       status?: string;
       itens: { descricao: string; quantidade: number; valor_unitario: number }[];
     }) => {
-      if (!empresaId) throw new Error("Empresa não definida");
+      if (!companyId) throw new Error("Empresa não definida");
       const { itens, ...orcData } = input;
       const valor_total = itens.reduce((sum, i) => sum + i.quantidade * i.valor_unitario, 0);
       const { data, error } = await supabase
         .from("orcamentos")
-        .insert({ ...orcData, valor_total, empresa_id: empresaId } as any)
+        .insert({ ...orcData, valor_total, company_id: companyId } as any)
         .select("*, clientes(nome)")
         .single();
       if (error) throw error;
@@ -43,7 +43,7 @@ export function useCreateOrcamento() {
       if (itens.length > 0) {
         const { error: itensError } = await supabase
           .from("orcamento_itens")
-          .insert(itens.map(i => ({ ...i, orcamento_id: data.id, empresa_id: empresaId })));
+          .insert(itens.map(i => ({ ...i, orcamento_id: data.id, company_id: companyId })));
         if (itensError) throw itensError;
       }
       return data;

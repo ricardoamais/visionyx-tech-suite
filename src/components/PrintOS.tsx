@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 
 interface EmpresaInfo {
-  nome?: string;
-  cnpj?: string | null;
-  telefone?: string | null;
+  name?: string;
+  document?: string | null;
+  phone?: string | null;
   email?: string | null;
   endereco?: string | null;
   whatsapp?: string | null;
@@ -16,9 +16,9 @@ function empresaHeader(e?: EmpresaInfo | null) {
   return `
     <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #333;padding-bottom:16px">
       ${e.logo_url ? `<img src="${e.logo_url}" alt="Logo" style="max-height:60px;margin-bottom:8px" />` : ""}
-      <h2 style="margin:0;font-size:18px;font-weight:700">${e.nome || ""}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:700">${e.name || ""}</h2>
       <p style="margin:2px 0;font-size:12px;color:#555">
-        ${[e.cnpj ? `CNPJ: ${e.cnpj}` : "", e.telefone ? `Tel: ${e.telefone}` : "", e.whatsapp ? `WhatsApp: ${e.whatsapp}` : ""].filter(Boolean).join(" | ")}
+        ${[e.document ? `CNPJ: ${e.document}` : "", e.phone ? `Tel: ${e.phone}` : "", e.whatsapp ? `WhatsApp: ${e.whatsapp}` : ""].filter(Boolean).join(" | ")}
       </p>
       ${e.endereco ? `<p style="margin:2px 0;font-size:12px;color:#555">${e.endereco}</p>` : ""}
       ${e.email ? `<p style="margin:2px 0;font-size:12px;color:#555">${e.email}</p>` : ""}
