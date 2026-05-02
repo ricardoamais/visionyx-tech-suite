@@ -12,7 +12,7 @@
    isWithinInterval, format, parseISO, subMonths 
  } from "date-fns";
  import { ptBR } from "date-fns/locale";
- import { CalendarIcon, Printer, FileDown } from "lucide-react";
+ import { CalendarIcon, Printer, FileDown, CheckCircle2, XCircle, Clock, ClipboardList } from "lucide-react";
  import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
  import { Calendar } from "@/components/ui/calendar";
  import { cn } from "@/lib/utils";
@@ -233,12 +233,12 @@ export default function Relatorios() {
        </div>
  
        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-         <StatCard title="OS Abertas" value={filteredData.summary.osAbertas} icon={BarChart} />
-         <StatCard title="OS Finalizadas" value={filteredData.summary.osFinalizadas} icon={BarChart} />
+         <StatCard title="OS Abertas" value={filteredData.summary.osAbertas} icon={Clock} />
+         <StatCard title="OS Finalizadas" value={filteredData.summary.osFinalizadas} icon={CheckCircle2} />
          <StatCard title="Faturamento Total" value={formatCurrency(filteredData.summary.faturamento)} icon={FileDown} />
          <StatCard title="Ticket Médio" value={formatCurrency(filteredData.summary.ticketMedio)} icon={CalendarIcon} />
-         <StatCard title="Orçamentos Aprovados" value={filteredData.summary.orcAprovados} icon={BarChart} />
-         <StatCard title="Orçamentos Recusados" value={filteredData.summary.orcRecusados} icon={BarChart} />
+         <StatCard title="Orçamentos Aprovados" value={filteredData.summary.orcAprovados} icon={ClipboardList} />
+         <StatCard title="Orçamentos Recusados" value={filteredData.summary.orcRecusados} icon={XCircle} />
        </div>
  
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
