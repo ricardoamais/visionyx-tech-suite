@@ -9,6 +9,7 @@ interface AuthContextType {
   role: "admin" | "tecnico" | "financeiro" | "super_admin" | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<"admin" | "tecnico" | "financeiro" | "super_admin" | null>(null);
   const [loading, setLoading] = useState(true);
+  const isSuperAdmin = session?.user?.email === 'amaiscontratos@gmail.com';
 
   useEffect(() => {
     if (session?.user) {
@@ -60,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, role, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, role, loading, signOut, isSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   );
