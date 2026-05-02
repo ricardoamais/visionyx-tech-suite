@@ -168,11 +168,17 @@ export default function Admin() {
     premium: companies?.filter(c => c.plan !== 'free').length || 0,
   };
 
+   const [activeTab, setActiveTab] = useState("companies");
+ 
    return (
      <div className="space-y-6">
-       <PageHeader title="Gerenciar Plataforma" description="Gerencie todas as empresas, planos e cobranças" />
+       <PageHeader title="Gerenciar Plataforma" description="Gerencie todas as empresas, planos e cobranças">
+         <Button variant="outline" onClick={() => setActiveTab("settings")}>
+           <DollarSign className="w-4 h-4 mr-2" /> Configurações Pix
+         </Button>
+       </PageHeader>
  
-       <Tabs defaultValue="companies" className="space-y-4">
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
          <TabsList className="bg-muted/50 p-1 border">
            <TabsTrigger value="companies" className="gap-2"><Building2 className="w-4 h-4" /> Empresas</TabsTrigger>
            <TabsTrigger value="billing" className="gap-2"><CreditCard className="w-4 h-4" /> Cobranças</TabsTrigger>
