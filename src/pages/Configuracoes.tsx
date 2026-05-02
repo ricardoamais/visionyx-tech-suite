@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Upload, Building2 } from "lucide-react";
+ import { Loader2, Upload, Building2, CreditCard, ShieldCheck, AlertCircle, Copy, CheckCircle2 } from "lucide-react";
 import { useEmpresaConfig, useUpdateEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
