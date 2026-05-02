@@ -259,9 +259,14 @@ export default function Orcamentos() {
                   <Printer className="w-4 h-4 mr-2" />Imprimir Orçamento
                 </Button>
                 {viewing.status === "aprovado" && (
-                  <Button onClick={() => { handleMarcarRecebido(viewing); setViewDialog(false); }}>
-                    <CheckCircle className="w-4 h-4 mr-2" />Marcar Recebido
-                  </Button>
+                  <>
+                    <Button onClick={() => { handleMarcarRecebido(viewing); setViewDialog(false); }}>
+                      <CheckCircle className="w-4 h-4 mr-2" />Marcar Recebido
+                    </Button>
+                    <Button variant="secondary" onClick={() => { handleGenerateOS(viewing); setViewDialog(false); }}>
+                      <ArrowRight className="w-4 h-4 mr-2" />Gerar OS
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
