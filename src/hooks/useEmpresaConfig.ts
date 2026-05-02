@@ -26,9 +26,9 @@ export function useUpdateEmpresaConfig() {
   return useMutation({
     mutationFn: async (input: {
       id: string;
-      name?: string;
-      document?: string | null;
-      phone?: string | null;
+      nome?: string;
+      cnpj?: string | null;
+      telefone?: string | null;
       email?: string | null;
       endereco?: string | null;
       whatsapp?: string | null;
