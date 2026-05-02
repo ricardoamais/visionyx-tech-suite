@@ -1,7 +1,7 @@
 import { 
   LayoutDashboard, Users, Monitor, ClipboardList, FileText, 
   DollarSign, Package, BarChart3, Settings, LogOut, Wrench, 
-  ShieldCheck, ShoppingCart, Building2 
+  ShieldCheck, ShoppingCart, Building2, ShieldAlert
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -35,7 +35,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { signOut, user, role } = useAuth();
+  const { signOut, user, role, isSuperAdmin } = useAuth();
   const { company } = useEmpresa();
   const isActive = (path: string) => location.pathname === path;
   const isAdmin = role === "admin";
@@ -104,12 +104,22 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {isAdmin && (
+              {isAdmin && !isSuperAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/gerenciar")}>
                     <NavLink to="/gerenciar">
                       <ShieldCheck className="w-4 h-4" />
-                      {!collapsed && <span>Gerenciar</span>}
+                      {!collapsed && <span>Equipe</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {isSuperAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin")}>
+                    <NavLink to="/admin">
+                      <ShieldAlert className="w-4 h-4" />
+                      {!collapsed && <span>Gerenciar Plataforma</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
