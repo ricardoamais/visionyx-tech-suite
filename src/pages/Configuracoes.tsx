@@ -22,7 +22,15 @@ export default function Configuracoes() {
    const { data: empresa, isLoading } = useEmpresaConfig();
   const updateEmpresa = useUpdateEmpresaConfig();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [form, setForm] = useState({ name: "", document: "", phone: "", endereco: "", email: "", whatsapp: "", logo_url: "" });
+   const [form, setForm] = useState({ 
+     name: "", 
+     document: "", 
+     phone: "", 
+     endereco: "", 
+     email: "", 
+     whatsapp: "", 
+     logo_url: "" 
+   });
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -66,8 +74,12 @@ export default function Configuracoes() {
         .from('logos')
         .getPublicUrl(filePath);
         
-      setForm(f => ({ ...f, logo_url: publicUrl }));
-      toast.success("Logo enviada! Clique em salvar para confirmar.");
+       setForm(f => ({ ...f, logo_url: publicUrl }));
+       // Also update the local state of the company in EmpresaContext if possible, 
+       // but invalidateQueries is safer for total sync
+       qc.invalidateQueries({ queryKey: ["company_config"] });
+       qc.invalidateQueries({ queryKey: ["empresa-config"] });
+       toast.success("Logo enviada!");
     } catch (error: any) {
       toast.error("Erro no upload: " + error.message);
     } finally {
@@ -100,13 +112,21 @@ export default function Configuracoes() {
      onError: () => toast.error("Erro ao atualizar status."),
    });
  
-   const getPrice = () => {
-     if (!empresa || !settings) return 0;
-     const plan = (empresa.plan || 'free').toLowerCase();
-     if (plan === 'pro') return Number(settings.price_pro);
-     if (plan === 'enterprise') return Number(settings.price_enterprise);
-     return Number(settings.price_free);
-   };
+  const getPrice = () => {
+    if (!empresa || !settings) return 0;
+    const plan = (empresa.plan || 'free').toLowerCase();
+    if (plan === 'pro') return Number(settings.price_pro);
+    if (plan === 'enterprise') return Number(settings.price_enterprise);
+    return Number(settings.price_free);
+  };
+
+  const getRemainingDays = () => {
+    if (!empresa?.plan_expires_at) return null;
+    const diffTime = new Date(empresa.plan_expires_at).getTime() - new Date().getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const remainingDays = getRemainingDays();
  
    const amount = getPrice();
    const description = empresa ? `Mensalidade Visionyx - ${empresa.name} - ${format(new Date(), 'MM/yyyy')}` : '';
@@ -156,8 +176,14 @@ export default function Configuracoes() {
 
                 <div className="grid gap-2"><Label>Nome da Empresa</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2"><Label>CNPJ</Label><Input value={form.document} onChange={e => setForm(f => ({ ...f, document: e.target.value }))} /></div>
-                  <div className="grid gap-2"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
+                  <div className="grid gap-2">
+                    <Label>CNPJ</Label>
+                    <Input value={form.document} readOnly className="bg-muted cursor-not-allowed" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Telefone</Label>
+                    <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                  </div>
                 </div>
                 <div className="grid gap-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-4">
@@ -223,10 +249,23 @@ export default function Configuracoes() {
                        {empresa?.payment_status === 'active' ? 'Em dia' : empresa?.payment_status === 'pending' ? 'Aguardando Confirmação' : 'Atrasado/Pendente'}
                      </Badge>
                    </div>
-                   <div className="space-y-1">
-                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Vencimento</p>
-                     <p className="font-bold">{empresa?.plan_expires_at ? format(new Date(empresa.plan_expires_at), "dd/MM/yyyy") : '—'}</p>
-                   </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Vencimento</p>
+                    <p className="font-bold">
+                      {empresa?.plan_expires_at ? (
+                        <>
+                          {format(new Date(empresa.plan_expires_at), "dd/MM/yyyy")}
+                          {remainingDays !== null && (
+                            <span className={`ml-2 text-xs ${
+                              remainingDays > 7 ? 'text-green-500' : remainingDays > 0 ? 'text-yellow-500' : 'text-red-500'
+                            }`}>
+                              ({remainingDays <= 0 ? 'Vencido' : `${remainingDays} dias restantes`})
+                            </span>
+                          )}
+                        </>
+                      ) : '—'}
+                    </p>
+                  </div>
                    <div className="space-y-1">
                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Valor Mensal</p>
                      <p className="font-bold">{amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
