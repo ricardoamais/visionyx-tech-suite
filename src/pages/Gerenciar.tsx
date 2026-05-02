@@ -213,13 +213,20 @@ export default function Gerenciar() {
     }
   }, [platformSettings]);
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Gerenciar Plataforma" description="Gestão de usuários, empresas e cobrança">
-        <Button onClick={() => setIsInviteOpen(true)}><UserPlus className="w-4 h-4 mr-2" /> Convidar Usuário</Button>
-      </PageHeader>
-
-      <Tabs defaultValue="users" className="space-y-4">
+   return (
+     <div className="space-y-6">
+       <PageHeader title="Gerenciar Equipe" description="Gestão de usuários e permissões da sua empresa">
+         <div className="flex gap-2">
+           {isSuperAdmin && (
+             <Button variant="outline" onClick={() => window.location.href = '/admin'}>
+               <ShieldAlert className="w-4 h-4 mr-2" /> Painel da Plataforma (Pix)
+             </Button>
+           )}
+           <Button onClick={() => setIsInviteOpen(true)}><UserPlus className="w-4 h-4 mr-2" /> Convidar Usuário</Button>
+         </div>
+       </PageHeader>
+ 
+       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="bg-muted/50 p-1 border">
           <TabsTrigger value="users" className="gap-2"><Users className="w-4 h-4" /> Usuários</TabsTrigger>
           {isSuperAdmin && (
