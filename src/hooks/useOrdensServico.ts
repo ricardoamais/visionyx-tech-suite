@@ -8,6 +8,7 @@ export function useOrdensServico() {
   return useQuery({
     queryKey: ["ordens_servico", empresaId],
     enabled: !!empresaId,
+    staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_servico")
