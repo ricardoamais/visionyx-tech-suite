@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Pencil, KeyRound, ShieldCheck, UserPlus, Mail, CreditCard, Settings, Check, Ban, DollarSign, Users } from "lucide-react";
+import { Loader2, Pencil, KeyRound, ShieldCheck, UserPlus, Mail, CreditCard, Settings, Check, Ban, DollarSign, Users, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
