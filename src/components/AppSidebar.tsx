@@ -116,16 +116,26 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              {isSuperAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin")}>
-                    <NavLink to="/admin">
-                      <ShieldAlert className="w-4 h-4" />
-                      {!collapsed && <span>Gerenciar Plataforma</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
+               {isSuperAdmin && (
+                 <>
+                   <SidebarMenuItem>
+                     <SidebarMenuButton asChild isActive={isActive("/admin")}>
+                       <NavLink to="/admin">
+                         <ShieldAlert className="w-4 h-4" />
+                         {!collapsed && <span>Gerenciar Plataforma</span>}
+                       </NavLink>
+                     </SidebarMenuButton>
+                   </SidebarMenuItem>
+                   <SidebarMenuItem>
+                     <SidebarMenuButton asChild isActive={isActive("/gerenciar")}>
+                       <NavLink to="/gerenciar">
+                         <ShieldCheck className="w-4 h-4" />
+                         {!collapsed && <span>Equipe / Usuários</span>}
+                       </NavLink>
+                     </SidebarMenuButton>
+                   </SidebarMenuItem>
+                 </>
+               )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

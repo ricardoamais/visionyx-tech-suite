@@ -5,10 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Building2, Users, CreditCard, Search, MoreHorizontal, Eye, Trash2, ShieldCheck, ShieldAlert, BarChart3 } from "lucide-react";
+ import { Loader2, Building2, Users, CreditCard, Search, MoreHorizontal, Eye, Trash2, ShieldCheck, ShieldAlert, BarChart3, Settings, Check, Ban, AlertTriangle, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { useEffect } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,10 +99,67 @@ export default function Admin() {
     },
   });
 
-  const filtered = companies?.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+   const { data: platformSettings } = useQuery({
+     queryKey: ["platform_settings_admin"],
+     queryFn: async () => {
+       const { data } = await supabase.from("platform_settings").select("*").single();
+       return data;
+     },
+   });
+ 
+   const updateSettingsMutation = useMutation({
+     mutationFn: async (values: any) => {
+       const { error } = await supabase
+         .from("platform_settings")
+         .update(values)
+         .eq("id", platformSettings.id);
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       toast.success("Configurações atualizadas!");
+       qc.invalidateQueries({ queryKey: ["platform_settings_admin"] });
+     },
+     onError: (e: Error) => toast.error(e.message),
+   });
+ 
+   const updateCompanyPaymentMutation = useMutation({
+     mutationFn: async ({ id, status, expiresAt }: { id: string, status: string, expiresAt?: string }) => {
+       const updates: any = { payment_status: status };
+       if (expiresAt) updates.plan_expires_at = expiresAt;
+       
+       const { error } = await supabase
+         .from("companies")
+         .update(updates)
+         .eq("id", id);
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       toast.success("Empresa atualizada!");
+       qc.invalidateQueries({ queryKey: ["all_companies"] });
+     },
+     onError: (e: Error) => toast.error(e.message),
+   });
+ 
+   const [pixKey, setPixKey] = useState("");
+   const [pixName, setPixName] = useState("");
+   const [priceFree, setPriceFree] = useState("");
+   const [pricePro, setPricePro] = useState("");
+   const [priceEnterprise, setPriceEnterprise] = useState("");
+ 
+   useEffect(() => {
+     if (platformSettings) {
+       setPixKey(platformSettings.pix_key);
+       setPixName(platformSettings.pix_name);
+       setPriceFree(platformSettings.price_free.toString());
+       setPricePro(platformSettings.price_pro.toString());
+       setPriceEnterprise(platformSettings.price_enterprise.toString());
+     }
+   }, [platformSettings]);
+ 
+   const filtered = companies?.filter(c => 
+     c.name.toLowerCase().includes(search.toLowerCase()) || 
+     c.email?.toLowerCase().includes(search.toLowerCase())
+   );
 
   const stats = {
     total: companies?.length || 0,
@@ -109,38 +168,52 @@ export default function Admin() {
     premium: companies?.filter(c => c.plan !== 'free').length || 0,
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Administração Geral" description="Gerencie todas as empresas e planos da plataforma" />
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total</CardTitle><Building2 className="w-4 h-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Ativas</CardTitle><ShieldCheck className="w-4 h-4 text-emerald-500" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.active}</div></CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Plano Free</CardTitle><CreditCard className="w-4 h-4 text-muted-foreground" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.free}</div></CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pro/Enterprise</CardTitle><CreditCard className="w-4 h-4 text-primary" /></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.premium}</div></CardContent>
-        </Card>
-      </div>
-
-      <Card className="glass-card">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Empresas Cadastradas</CardTitle>
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar empresa ou email..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-        </CardHeader>
-        <CardContent>
+   const [activeTab, setActiveTab] = useState("companies");
+ 
+   return (
+     <div className="space-y-6">
+       <PageHeader title="Gerenciar Plataforma" description="Gerencie todas as empresas, planos e cobranças">
+         <Button variant="outline" onClick={() => setActiveTab("settings")}>
+           <DollarSign className="w-4 h-4 mr-2" /> Configurações Pix
+         </Button>
+       </PageHeader>
+ 
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+         <TabsList className="bg-muted/50 p-1 border">
+           <TabsTrigger value="companies" className="gap-2"><Building2 className="w-4 h-4" /> Empresas</TabsTrigger>
+           <TabsTrigger value="billing" className="gap-2"><CreditCard className="w-4 h-4" /> Cobranças</TabsTrigger>
+           <TabsTrigger value="settings" className="gap-2"><Settings className="w-4 h-4" /> Configurações Pix</TabsTrigger>
+         </TabsList>
+ 
+         <TabsContent value="companies" className="space-y-4">
+           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+             <Card className="glass-card">
+               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total</CardTitle><Building2 className="w-4 h-4 text-muted-foreground" /></CardHeader>
+               <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
+             </Card>
+             <Card className="glass-card">
+               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Ativas</CardTitle><ShieldCheck className="w-4 h-4 text-emerald-500" /></CardHeader>
+               <CardContent><div className="text-2xl font-bold">{stats.active}</div></CardContent>
+             </Card>
+             <Card className="glass-card">
+               <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Plano Free</CardTitle><CreditCard className="w-4 h-4 text-muted-foreground" /></CardHeader>
+               <CardContent><div className="text-2xl font-bold">{stats.free}</div></CardContent>
+             </Card>
+              <Card className="glass-card">
+                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pro/Enterprise</CardTitle><CreditCard className="w-4 h-4 text-primary" /></CardHeader>
+                <CardContent><div className="text-2xl font-bold">{stats.premium}</div></CardContent>
+              </Card>
+            </div>
+ 
+           <Card className="glass-card">
+             <CardHeader className="flex flex-row items-center justify-between">
+               <CardTitle className="text-base">Empresas Cadastradas</CardTitle>
+               <div className="relative w-64">
+                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                 <Input placeholder="Buscar empresa ou email..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
+               </div>
+             </CardHeader>
+             <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
           ) : (
@@ -221,10 +294,147 @@ export default function Admin() {
             </div>
           )}
         </CardContent>
-      </Card>
-    </div>
-  );
-}
+             </Card>
+           </TabsContent>
+ 
+           <TabsContent value="billing" className="space-y-4">
+             <div className="grid gap-4 md:grid-cols-4">
+               <Card>
+                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                   <CardTitle className="text-sm font-medium">Ativas</CardTitle>
+                   <Check className="h-4 w-4 text-green-500" />
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'active').length || 0}</div>
+                 </CardContent>
+               </Card>
+               <Card>
+                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                   <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+                   <CreditCard className="h-4 w-4 text-yellow-500" />
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'pending').length || 0}</div>
+                 </CardContent>
+               </Card>
+               <Card>
+                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                   <CardTitle className="text-sm font-medium">Vencidas</CardTitle>
+                   <AlertTriangle className="h-4 w-4 text-orange-500" />
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'overdue' || (c.payment_status !== 'active' && new Date(c.plan_expires_at) < new Date())).length || 0}</div>
+                 </CardContent>
+               </Card>
+               <Card>
+                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                   <CardTitle className="text-sm font-medium">Bloqueadas</CardTitle>
+                   <Ban className="h-4 w-4 text-red-500" />
+                 </CardHeader>
+                 <CardContent>
+                   <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'blocked').length || 0}</div>
+                 </CardContent>
+               </Card>
+             </div>
+ 
+             <Card className="glass-card">
+               <CardHeader><CardTitle className="text-base">Gestão de Mensalidades</CardTitle></CardHeader>
+               <CardContent>
+                 <div className="rounded-md border">
+                   <Table>
+                     <TableHeader>
+                       <TableRow>
+                         <TableHead>Empresa</TableHead>
+                         <TableHead>Plano</TableHead>
+                         <TableHead>Vencimento</TableHead>
+                         <TableHead>Status</TableHead>
+                         <TableHead className="text-right">Ações</TableHead>
+                       </TableRow>
+                     </TableHeader>
+                     <TableBody>
+                       {companies?.map((c) => {
+                         const isExpired = new Date(c.plan_expires_at) < new Date();
+                         return (
+                           <TableRow key={c.id}>
+                             <TableCell className="font-medium">{c.name}</TableCell>
+                             <TableCell className="capitalize">{c.plan || 'Free'}</TableCell>
+                             <TableCell>{new Date(c.plan_expires_at).toLocaleDateString("pt-BR")}</TableCell>
+                             <TableCell>
+                               <Badge variant={c.payment_status === 'active' ? 'default' : c.payment_status === 'pending' ? 'secondary' : 'destructive'}>
+                                 {c.payment_status === 'active' ? 'Ativo' : c.payment_status === 'pending' ? 'Pendente' : isExpired ? 'Vencido' : 'Bloqueado'}
+                               </Badge>
+                             </TableCell>
+                             <TableCell className="text-right space-x-1">
+                               <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
+                                 const nextExpiry = new Date();
+                                 nextExpiry.setDate(nextExpiry.getDate() + 30);
+                                 updateCompanyPaymentMutation.mutate({ id: c.id, status: 'active', expiresAt: nextExpiry.toISOString() });
+                               }}>
+                                 Confirmar Pgto
+                               </Button>
+                               <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-600" onClick={() => {
+                                 updateCompanyPaymentMutation.mutate({ id: c.id, status: 'blocked' });
+                               }}>
+                                 Bloquear
+                               </Button>
+                             </TableCell>
+                           </TableRow>
+                         );
+                       })}
+                     </TableBody>
+                   </Table>
+                 </div>
+               </CardContent>
+             </Card>
+           </TabsContent>
+ 
+           <TabsContent value="settings" className="space-y-4">
+             <Card className="glass-card max-w-2xl">
+               <CardHeader><CardTitle className="text-base">Configurações de Cobrança (Pix)</CardTitle></CardHeader>
+               <CardContent className="space-y-4">
+                 <div className="grid gap-2">
+                   <Label>Chave Pix (Email, CPF, CNPJ ou Celular)</Label>
+                   <Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="ex: amaiscontratos@gmail.com" />
+                 </div>
+                 <div className="grid gap-2">
+                   <Label>Nome do Recebedor</Label>
+                   <Input value={pixName} onChange={(e) => setPixName(e.target.value)} placeholder="ex: Ricardo Amais" />
+                 </div>
+                 <div className="grid grid-cols-3 gap-4">
+                   <div className="grid gap-2">
+                     <Label>Mensalidade Free</Label>
+                     <Input type="number" value={priceFree} onChange={(e) => setPriceFree(e.target.value)} />
+                   </div>
+                   <div className="grid gap-2">
+                     <Label>Mensalidade Pro</Label>
+                     <Input type="number" value={pricePro} onChange={(e) => setPricePro(e.target.value)} />
+                   </div>
+                   <div className="grid gap-2">
+                     <Label>Mensalidade Enterprise</Label>
+                     <Input type="number" value={priceEnterprise} onChange={(e) => setPriceEnterprise(e.target.value)} />
+                   </div>
+                 </div>
+                 <Button 
+                   className="w-full md:w-auto" 
+                   onClick={() => updateSettingsMutation.mutate({
+                     pix_key: pixKey,
+                     pix_name: pixName,
+                     price_free: parseFloat(priceFree),
+                     price_pro: parseFloat(pricePro),
+                     price_enterprise: parseFloat(priceEnterprise)
+                   })}
+                   disabled={updateSettingsMutation.isPending}
+                 >
+                   {updateSettingsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                   Salvar Configurações
+                 </Button>
+               </CardContent>
+             </Card>
+           </TabsContent>
+         </Tabs>
+       </div>
+   );
+ }
 
 function SelectItem({ value, children }: { value: string, children: React.ReactNode }) {
   return <option value={value}>{children}</option>;

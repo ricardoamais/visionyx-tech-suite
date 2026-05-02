@@ -6,11 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Upload, Building2 } from "lucide-react";
+ import { Loader2, Upload, Building2, CreditCard, ShieldCheck, AlertCircle, Copy, CheckCircle2 } from "lucide-react";
 import { useEmpresaConfig, useUpdateEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { toast } from "sonner";
-import { useTheme } from "next-themes";
-import { supabase } from "@/integrations/supabase/client";
+ import { useTheme } from "next-themes";
+ import { supabase } from "@/integrations/supabase/client";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Badge } from "@/components/ui/badge";
+ import { generatePixPayload } from "@/utils/pix";
+ import { format } from "date-fns";
+ import QRCode from "react-qr-code";
+ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function Configuracoes() {
   const { data: empresa, isLoading, isError } = useEmpresaConfig();
@@ -69,13 +75,63 @@ export default function Configuracoes() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Configurações" description="Configure o sistema conforme sua necessidade" />
-
-      <div className="grid gap-6 max-w-2xl">
-        <Card className="glass-card">
-          <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
+   const qc = useQueryClient();
+   const [copied, setCopied] = useState(false);
+   const { data: settings } = useQuery({
+     queryKey: ["platform_settings"],
+     queryFn: async () => {
+       const { data } = await supabase.from("platform_settings").select("*").single();
+       return data;
+     },
+   });
+ 
+   const markAsPendingMutation = useMutation({
+     mutationFn: async () => {
+       const { error } = await supabase
+         .from("companies")
+         .update({ payment_status: 'pending' })
+         .eq("id", empresa!.id);
+       if (error) throw error;
+     },
+     onSuccess: () => {
+       toast.success("Informamos o sistema. Aguarde a confirmação manual.");
+       qc.invalidateQueries({ queryKey: ["empresa-config"] });
+     },
+     onError: () => toast.error("Erro ao atualizar status."),
+   });
+ 
+   const getPrice = () => {
+     if (!empresa || !settings) return 0;
+     const plan = (empresa.plan || 'free').toLowerCase();
+     if (plan === 'pro') return Number(settings.price_pro);
+     if (plan === 'enterprise') return Number(settings.price_enterprise);
+     return Number(settings.price_free);
+   };
+ 
+   const amount = getPrice();
+   const description = empresa ? `Mensalidade Visionyx - ${empresa.name} - ${format(new Date(), 'MM/yyyy')}` : '';
+   const pixPayload = settings && empresa && amount > 0 ? generatePixPayload(
+     settings.pix_key,
+     settings.pix_name,
+     "SAO PAULO",
+     amount,
+     description
+   ) : '';
+ 
+   return (
+     <div className="space-y-6">
+       <PageHeader title="Configurações" description="Configure o sistema conforme sua necessidade" />
+ 
+       <Tabs defaultValue="geral" className="space-y-6">
+         <TabsList className="bg-muted/50 p-1 border">
+           <TabsTrigger value="geral" className="gap-2">Geral</TabsTrigger>
+           <TabsTrigger value="assinatura" className="gap-2">Assinatura</TabsTrigger>
+         </TabsList>
+ 
+         <TabsContent value="geral" className="space-y-6">
+           <div className="grid gap-6 max-w-2xl">
+             <Card className="glass-card">
+               <CardHeader><CardTitle className="text-base">Dados da Empresa</CardTitle></CardHeader>
           <CardContent className="grid gap-4">
             {isLoading ? (
               <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
@@ -147,8 +203,86 @@ export default function Configuracoes() {
             <p className="text-xs text-muted-foreground">Configure o número para envio automático de OS e orçamentos via WhatsApp.</p>
             <Button variant="secondary" className="w-fit" onClick={() => toast.info("Integração em desenvolvimento")}>Configurar</Button>
           </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
+             </Card>
+           </div>
+         </TabsContent>
+ 
+         <TabsContent value="assinatura" className="space-y-6">
+           <div className="grid gap-6 max-w-2xl">
+             <Card className="glass-card">
+               <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-primary" /> Status da Assinatura</CardTitle></CardHeader>
+               <CardContent className="space-y-6">
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Plano Atual</p>
+                     <Badge className="capitalize text-sm px-3 py-1">{empresa?.plan || 'Free'}</Badge>
+                   </div>
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status de Pagamento</p>
+                     <Badge variant={empresa?.payment_status === 'active' ? 'default' : 'destructive'} className="text-sm px-3 py-1">
+                       {empresa?.payment_status === 'active' ? 'Em dia' : empresa?.payment_status === 'pending' ? 'Aguardando Confirmação' : 'Atrasado/Pendente'}
+                     </Badge>
+                   </div>
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Vencimento</p>
+                     <p className="font-bold">{empresa?.plan_expires_at ? format(new Date(empresa.plan_expires_at), "dd/MM/yyyy") : '—'}</p>
+                   </div>
+                   <div className="space-y-1">
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Valor Mensal</p>
+                     <p className="font-bold">{amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                   </div>
+                 </div>
+ 
+                 {amount > 0 && empresa?.payment_status !== 'active' && (
+                   <div className="pt-6 border-t space-y-6">
+                     <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/10">
+                       <AlertCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                       <div className="space-y-1">
+                         <p className="text-sm font-semibold">Pagamento Pendente</p>
+                         <p className="text-xs text-muted-foreground">Efetue o pagamento via Pix para manter seu acesso ativo.</p>
+                       </div>
+                     </div>
+ 
+                     <div className="flex flex-col items-center gap-4 py-4 bg-white rounded-xl border-2 border-dashed border-muted mx-auto max-w-[280px]">
+                       <div className="p-2 bg-white rounded-lg">
+                         <QRCode value={pixPayload} size={200} />
+                       </div>
+                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">Escaneie o QR Code acima</p>
+                     </div>
+ 
+                     <div className="space-y-3">
+                       <Label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Código Copia e Cola</Label>
+                       <div className="flex gap-2">
+                         <div className="flex-1 p-3 bg-muted rounded-lg text-[10px] font-mono break-all line-clamp-2 leading-relaxed">
+                           {pixPayload}
+                         </div>
+                         <Button size="icon" variant="outline" className="shrink-0 h-auto" onClick={() => {
+                           navigator.clipboard.writeText(pixPayload);
+                           setCopied(true);
+                           toast.success("Código Pix copiado!");
+                           setTimeout(() => setCopied(false), 2000);
+                         }}>
+                           {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                         </Button>
+                       </div>
+                     </div>
+ 
+                     <Button 
+                       className="w-full" 
+                       size="lg"
+                       onClick={() => markAsPendingMutation.mutate()} 
+                       disabled={markAsPendingMutation.isPending || empresa?.payment_status === 'pending'}
+                     >
+                       {markAsPendingMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                       {empresa?.payment_status === 'pending' ? 'Aguardando Confirmação' : 'Já realizei o pagamento'}
+                     </Button>
+                   </div>
+                 )}
+               </CardContent>
+             </Card>
+           </div>
+         </TabsContent>
+       </Tabs>
+     </div>
+   );
+ }
