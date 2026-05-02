@@ -14,7 +14,7 @@ import { useTheme } from "next-themes";
 export default function Configuracoes() {
   const { data: empresa, isLoading, isError } = useEmpresaConfig();
   const updateEmpresa = useUpdateEmpresaConfig();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [form, setForm] = useState({ nome: "", cnpj: "", telefone: "", endereco: "", email: "", whatsapp: "" });
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function Configuracoes() {
             <div className="flex items-center justify-between">
               <div><p className="text-sm font-medium">Tema Escuro</p><p className="text-xs text-muted-foreground">Alterne entre tema claro e escuro</p></div>
               <Switch 
-                checked={theme === "dark"} 
+                checked={resolvedTheme === "dark"} 
                 onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")} 
               />
             </div>
