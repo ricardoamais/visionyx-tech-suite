@@ -1,5 +1,45 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresa } from "@/contexts/EmpresaContext";
+import { toast } from "sonner";
+
+export function useCaixa() {
+  const { empresaId } = useEmpresa();
+  return useQuery({
+    queryKey: ["caixa", empresaId],
+    enabled: !!empresaId,
+    staleTime: 30000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("caixas")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCaixaAberto() {
+  const { empresaId } = useEmpresa();
+  return useQuery({
+    queryKey: ["caixa-aberto", empresaId],
+    enabled: !!empresaId,
+    staleTime: 10000, // Slightly shorter for cash register status
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("caixas")
+        .select("*")
+        .eq("status", "aberto")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";

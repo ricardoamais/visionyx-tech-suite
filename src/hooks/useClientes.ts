@@ -9,6 +9,7 @@ export function useClientes() {
   return useQuery({
     queryKey: ["clientes", empresaId],
     enabled: !!empresaId,
+    staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase.from("clientes").select("*").order("nome");
       if (error) throw error;

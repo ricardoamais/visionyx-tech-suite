@@ -8,6 +8,7 @@ export function usePecas() {
   return useQuery({
     queryKey: ["pecas", empresaId],
     enabled: !!empresaId,
+    staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase.from("pecas").select("*").order("nome");
       if (error) throw error;

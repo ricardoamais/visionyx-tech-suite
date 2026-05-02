@@ -8,6 +8,7 @@ export function useOrcamentos() {
   return useQuery({
     queryKey: ["orcamentos", empresaId],
     enabled: !!empresaId,
+    staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orcamentos")
