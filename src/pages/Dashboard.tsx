@@ -1,4 +1,4 @@
-import { ClipboardList, Clock, CheckCircle, FileText, DollarSign, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { ClipboardList, Clock, CheckCircle, FileText, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
