@@ -5,12 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Building2, Users, CreditCard, Search, MoreHorizontal, Eye, Trash2, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Loader2, Building2, Users, CreditCard, Search, MoreHorizontal, Eye, Trash2, ShieldCheck, ShieldAlert, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
@@ -24,26 +25,28 @@ export default function Admin() {
   const [search, setSearch] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<any>(null);
   
-  const { data: companies, isLoading } = useQuery({
+  const { data: companies, isLoading, isError } = useQuery({
     queryKey: ["all_companies"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: rawData, error: rawError } = await supabase
         .from("companies")
         .select(`
           *,
           profiles:profiles(count)
         `)
-        .order("created_at", { ascending: false })
-        .then(async ({ data, error }) => {
-          if (error) throw error;
-          const enrichedData = await Promise.all(data.map(async (c: any) => {
-            const { count: osCount } = await supabase.from("ordens_servico").select("*", { count: 'exact', head: true }).eq("company_id", c.id);
-            return { ...c, os_count: osCount || 0 };
-          }));
-          return enrichedData;
-        });
-      if (error) throw error;
-      return data;
+        .order("created_at", { ascending: false });
+      
+      if (rawError) throw rawError;
+      
+      const enrichedData = await Promise.all(rawData.map(async (c: any) => {
+        const { count: osCount } = await supabase
+          .from("ordens_servico")
+          .select("*", { count: 'exact', head: true })
+          .eq("company_id", c.id);
+        return { ...c, os_count: osCount || 0 };
+      }));
+      
+      return enrichedData;
     },
   });
 
