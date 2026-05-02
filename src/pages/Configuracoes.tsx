@@ -15,14 +15,14 @@ export default function Configuracoes() {
   const { data: empresa, isLoading, isError } = useEmpresaConfig();
   const updateEmpresa = useUpdateEmpresaConfig();
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [form, setForm] = useState({ nome: "", cnpj: "", telefone: "", endereco: "", email: "", whatsapp: "" });
+  const [form, setForm] = useState({ name: "", document: "", phone: "", endereco: "", email: "", whatsapp: "" });
 
   useEffect(() => {
     if (empresa) {
       setForm({
-        nome: empresa.nome || "",
-        cnpj: empresa.cnpj || "",
-        telefone: empresa.telefone || "",
+        name: empresa.name || "",
+        document: empresa.document || "",
+        phone: empresa.phone || "",
         endereco: empresa.endereco || "",
         email: empresa.email || "",
         whatsapp: empresa.whatsapp || "",
@@ -50,10 +50,10 @@ export default function Configuracoes() {
               <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
             ) : (
               <>
-                <div className="grid gap-2"><Label>Nome da Empresa</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} /></div>
+                <div className="grid gap-2"><Label>Nome da Empresa</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2"><Label>CNPJ</Label><Input value={form.cnpj} onChange={e => setForm(f => ({ ...f, cnpj: e.target.value }))} /></div>
-                  <div className="grid gap-2"><Label>Telefone</Label><Input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} /></div>
+                  <div className="grid gap-2"><Label>CNPJ</Label><Input value={form.document} onChange={e => setForm(f => ({ ...f, document: e.target.value }))} /></div>
+                  <div className="grid gap-2"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
                 </div>
                 <div className="grid gap-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} /></div>
                 <div className="grid grid-cols-2 gap-4">
