@@ -890,8 +890,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_plan_limit: {
+        Args: { feature: string; target_company_id: string }
+        Returns: boolean
+      }
       get_my_company_id: { Args: never; Returns: string }
       get_user_empresa_id: { Args: { _user_id: string }; Returns: string }
+      get_user_role: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -913,6 +918,7 @@ export type Database = {
         | "em_manutencao"
         | "finalizado"
         | "entregue"
+      user_role: "admin" | "tecnico" | "financeiro" | "super_admin"
       venda_pagamento: "dinheiro" | "cartao_credito" | "cartao_debito" | "pix"
     }
     CompositeTypes: {
@@ -1054,6 +1060,7 @@ export const Constants = {
         "finalizado",
         "entregue",
       ],
+      user_role: ["admin", "tecnico", "financeiro", "super_admin"],
       venda_pagamento: ["dinheiro", "cartao_credito", "cartao_debito", "pix"],
     },
   },
