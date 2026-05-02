@@ -1,10 +1,12 @@
-import {
-  LayoutDashboard, Users, Monitor, ClipboardList, FileText,
-  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, ShieldCheck, ShoppingCart
+import { 
+  LayoutDashboard, Users, Monitor, ClipboardList, FileText, 
+  DollarSign, Package, BarChart3, Settings, LogOut, Wrench, 
+  ShieldCheck, ShoppingCart, Building2 
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmpresa } from "@/contexts/EmpresaContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -34,6 +36,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { signOut, user, role } = useAuth();
+  const { company } = useEmpresa();
   const isActive = (path: string) => location.pathname === path;
   const isAdmin = role === "admin";
 
@@ -46,15 +49,23 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
+      <SidebarHeader className="p-4 border-b border-sidebar-border/50">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center flex-shrink-0">
-            <Wrench className="w-5 h-5 text-sidebar-primary-foreground" />
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20">
+            {company?.logo_url ? (
+              <img src={company.logo_url} alt={company.name} className="w-6 h-6 object-contain" />
+            ) : (
+              <Building2 className="w-5 h-5 text-primary" />
+            )}
           </div>
           {!collapsed && (
-            <div>
-              <h1 className="text-base font-bold text-sidebar-foreground tracking-tight">Visionyx</h1>
-              <p className="text-[11px] text-sidebar-foreground/60">Sistema de Assistência</p>
+            <div className="min-w-0">
+              <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight truncate">
+                {company?.name || "Visionyx"}
+              </h1>
+              <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium">
+                Assistência Técnica
+              </p>
             </div>
           )}
         </div>
