@@ -65,6 +65,35 @@ export function BillingManager() {
     }
   }, [company]);
 
+  const planAmount = (() => {
+    if (!company || !settings) return 0;
+    const plan = (company.plan || 'free').toLowerCase();
+    if (plan === 'pro') return Number(settings.price_pro);
+    if (plan === 'enterprise') return Number(settings.price_enterprise);
+    return Number(settings.price_free);
+  })();
+
+  const pixDescription = company ? `Mensalidade Visionyx - ${company.name} - ${format(new Date(), 'MM/yyyy')}` : '';
+
+  useEffect(() => {
+    if (settings && company && planAmount > 0) {
+      setLoadingPix(true);
+      generatePix({
+        pixKey: settings.pix_key,
+        name: settings.pix_name || 'Visionyx',
+        city: "SAO PAULO",
+        amount: planAmount,
+        description: pixDescription
+      }).then(payload => {
+        setPixPayload(payload);
+        setLoadingPix(false);
+      }).catch(err => {
+        console.error(err);
+        setLoadingPix(false);
+      });
+    }
+  }, [settings, company, planAmount, pixDescription]);
+
   const markAsPendingMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
