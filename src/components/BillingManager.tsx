@@ -13,7 +13,7 @@ import { format, differenceInDays, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export function BillingManager() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -81,8 +81,10 @@ export function BillingManager() {
 
   if (loadingCompany || !company || !settings) return null;
 
-  const isBlocked = company.payment_status === 'blocked' || 
-                    (company.payment_status !== 'active' && isAfter(new Date(), new Date(company.plan_expires_at)));
+  const isBlocked = !isSuperAdmin && (
+    company.payment_status === 'blocked' || 
+    (company.payment_status !== 'active' && isAfter(new Date(), new Date(company.plan_expires_at)))
+  );
 
   const getPrice = () => {
     const plan = (company.plan || 'free').toLowerCase();
