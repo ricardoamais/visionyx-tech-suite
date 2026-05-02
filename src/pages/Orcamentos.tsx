@@ -134,59 +134,50 @@ export default function Orcamentos() {
 
       <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>{editing ? "Editar Orçamento" : "Novo Orçamento"}</DialogTitle></DialogHeader>
-            <div className="grid gap-4 py-2">
-              <div className="grid gap-2">
-                <Label>Cliente *</Label>
-                <Select value={form.cliente_id || undefined} onValueChange={v => setForm(f => ({ ...f, cliente_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                  <SelectContent>
-                    {(clientes ?? []).filter(c => c?.id).length === 0 ? (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Nenhum cliente cadastrado</div>
-                    ) : (
-                      (clientes ?? []).filter(c => c?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="aprovado">Aprovado</SelectItem>
-                    <SelectItem value="reprovado">Reprovado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label>Itens</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setItens(i => [...i, { ...emptyItem }])}>
-                    <Plus className="w-3 h-3 mr-1" />Adicionar
-                  </Button>
+          <DialogHeader><DialogTitle>{editing ? "Editar Orçamento" : "Novo Orçamento"}</DialogTitle></DialogHeader>
+          <Form {...form}>
+            <form onSubmit={handleSave} className="grid gap-4 py-2">
+              <FormField control={form.control} name="cliente_id" render={({ field }) => (
+                <FormItem><FormLabel>Cliente *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger></FormControl>
+                    <SelectContent>{(clientes ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
+                  </Select><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="status" render={({ field }) => (
+                <FormItem><FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="aprovado">Aprovado</SelectItem>
+                      <SelectItem value="reprovado">Reprovado</SelectItem>
+                    </SelectContent>
+                  </Select><FormMessage /></FormItem>
+              )} />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between"><Label>Itens</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={() => append({ descricao: "", quantidade: 1, valor_unitario: 0 })}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
                 </div>
-                {itens.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-[1fr_60px_80px_30px] gap-2 items-end">
-                    <Input placeholder="Descrição" value={item.descricao} onChange={e => { const n = [...itens]; n[idx].descricao = e.target.value; setItens(n); }} />
-                    <Input type="number" placeholder="Qtd" value={item.quantidade} onChange={e => { const n = [...itens]; n[idx].quantidade = Number(e.target.value); setItens(n); }} />
-                    <Input type="number" placeholder="Valor" value={item.valor_unitario} onChange={e => { const n = [...itens]; n[idx].valor_unitario = Number(e.target.value); setItens(n); }} />
-                    {itens.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => setItens(i => i.filter((_, j) => j !== idx))}>
-                        <Trash2 className="w-3 h-3 text-destructive" />
-                      </Button>
-                    )}
+                {itensFields.map((field, index) => (
+                  <div key={field.id} className="grid grid-cols-[1fr_60px_80px_30px] gap-2 items-end">
+                    <Input placeholder="Descrição" {...form.register(`itens.${index}.descricao`)} />
+                    <Input type="number" placeholder="Qtd" {...form.register(`itens.${index}.quantidade`, { valueAsNumber: true })} />
+                    <Input type="number" placeholder="R$" {...form.register(`itens.${index}.valor_unitario`, { valueAsNumber: true })} />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
                   </div>
                 ))}
                 <p className="text-sm font-medium text-right">Total: R$ {valorTotal.toFixed(2)}</p>
               </div>
-              <div className="grid gap-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} /></div>
-              <Button onClick={handleSave} disabled={isSaving}>
+              <FormField control={form.control} name="observacoes" render={({ field }) => (
+                <FormItem><FormLabel>Observações</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <Button type="submit" disabled={isSaving}>
                 {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {editing ? "Salvar" : "Criar e Imprimir"}
               </Button>
-            </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
