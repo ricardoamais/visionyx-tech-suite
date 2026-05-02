@@ -112,6 +112,7 @@ export default function OrdensServico() {
   }, [watchPecas, watchServicos, form]);
 
   const { data: fotosEdit } = useOSFotos(editing?.id);
+  const { data: fotosView } = useOSFotos(viewing?.id);
   const addFoto = useAddOSFoto();
   const deleteFoto = useDeleteOSFoto();
 
@@ -182,7 +183,7 @@ export default function OrdensServico() {
       const editingId = editing.id;
       const isFinalizing = (values.status === "finalizado" || values.status === "entregue") && (editing.status !== "finalizado" && editing.status !== "entregue");
       closeDialog();
-      updateOS.mutate({ id: editingId, ...values }, {
+      updateOS.mutate({ id: editingId, ...values } as any, {
         onSuccess: (data) => {
           if (isFinalizing) {
             createConta.mutate({
@@ -201,7 +202,7 @@ export default function OrdensServico() {
     } else {
       const clienteNome = clientes?.find(c => c.id === values.cliente_id)?.nome ?? "";
       closeDialog();
-      createOS.mutate(values, {
+      createOS.mutate(values as any, {
         onSuccess: async (data) => {
           const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
           printOS({
