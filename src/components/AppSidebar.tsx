@@ -50,13 +50,19 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4 border-b border-sidebar-border/50">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20">
-            {company?.logo_url ? (
-              <img src={company.logo_url} alt={company.name} className="w-6 h-6 object-contain" />
-            ) : (
-              <Building2 className="w-5 h-5 text-primary" />
-            )}
-          </div>
+          {company?.logo_url ? (
+            <img
+              src={company.logo_url}
+              alt="Logo"
+              className="w-8 h-8 rounded-md object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">
+                {company?.name?.charAt(0) ?? 'V'}
+              </span>
+            </div>
+          )}
           {!collapsed && (
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight truncate">
