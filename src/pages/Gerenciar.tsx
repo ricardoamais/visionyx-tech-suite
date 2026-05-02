@@ -50,6 +50,7 @@ function useUsers() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("manage-users", {
         body: { action: "list" },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       });
       if (res.error) throw new Error(res.error.message || "Erro ao listar usuários");
       if (res.data?.error) throw new Error(res.data.error);
@@ -134,8 +135,10 @@ export default function Gerenciar() {
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("manage-users", {
         body: { action: "invite", email: inviteEmail, nome: inviteNome, role: inviteRole },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       });
       if (res.error) throw new Error(res.error.message);
       if (res.data?.error) throw new Error(res.data.error);
@@ -153,8 +156,10 @@ export default function Gerenciar() {
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!editUser) return;
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("manage-users", {
         body: { action: "update", userId: editUser.id, nome: editNome, telefone: editTelefone, role: editRole },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       });
       if (res.data?.error) throw new Error(res.data.error);
     },
@@ -169,8 +174,10 @@ export default function Gerenciar() {
   const resetMutation = useMutation({
     mutationFn: async () => {
       if (!resetUser || !newPassword) return;
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("manage-users", {
         body: { action: "reset_password", userId: resetUser.id, newPassword },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
       });
       if (res.data?.error) throw new Error(res.data.error);
     },
