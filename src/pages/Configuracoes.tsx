@@ -57,32 +57,62 @@ export default function Configuracoes() {
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresa) return;
+
     try {
-      const file = e.target.files?.[0];
-      if (!file || !empresa) return;
-      
+      // Validar tamanho máximo 2MB
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Imagem muito grande. Máximo 2MB.');
+        return;
+      }
+
+      // Validar tipo
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'].includes(file.type)) {
+        toast.error('Formato inválido. Use JPG, PNG, WebP ou SVG.');
+        return;
+      }
+
       setUploading(true);
+
+      // Nome único para o arquivo
       const fileExt = file.name.split('.').pop();
-      const filePath = `logos/${empresa.id}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-      
+      const fileName = `${empresa.id}-logo-${Date.now()}.${fileExt}`;
+
+      // Upload para o Storage
       const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file);
-        
+        .from('company-logos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
       if (uploadError) throw uploadError;
-      
+
+      // Pegar URL pública
       const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(filePath);
-        
-       setForm(f => ({ ...f, logo_url: publicUrl }));
-       // Also update the local state of the company in EmpresaContext if possible, 
-       // but invalidateQueries is safer for total sync
-       qc.invalidateQueries({ queryKey: ["company_config"] });
-       qc.invalidateQueries({ queryKey: ["empresa-config"] });
-       toast.success("Logo enviada!");
-    } catch (error: any) {
-      toast.error("Erro no upload: " + error.message);
+        .from('company-logos')
+        .getPublicUrl(fileName);
+
+      // Salvar URL na tabela companies
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({ logo_url: publicUrl })
+        .eq('id', empresa.id);
+
+      if (updateError) throw updateError;
+
+      setForm(f => ({ ...f, logo_url: publicUrl }));
+      
+      // Atualizar cache para refletir no sidebar
+      qc.invalidateQueries({ queryKey: ['company_user'] });
+      qc.invalidateQueries({ queryKey: ['empresa-config'] });
+      qc.invalidateQueries({ queryKey: ["current_company"] });
+      
+      toast.success('Logo atualizado com sucesso!');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Erro no upload: ' + err.message);
     } finally {
       setUploading(false);
     }
