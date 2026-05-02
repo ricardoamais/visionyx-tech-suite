@@ -39,13 +39,6 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   return <EmpresaProvider><EmpresaGate>{children}</EmpresaGate></EmpresaProvider>;
 };
 
-const AdminRoute = ({ children }: { children: ReactNode }) => {
-  const { role, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  if (role !== "admin") return <Navigate to="/" replace />;
-  return <>{children}</>;
-};
-
 const EmpresaGate = ({ children }: { children: ReactNode }) => {
   const { loading } = useEmpresa();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -63,6 +56,20 @@ const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
   const { role, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   if (role !== "super_admin") return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const AdminRoute = ({ children }: { children: ReactNode }) => {
+  const { role, loading, isSuperAdmin } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (role !== "admin" && !isSuperAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const SuperAdminRoute = ({ children }: { children: ReactNode }) => {
+  const { isSuperAdmin, loading } = useAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (!isSuperAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
