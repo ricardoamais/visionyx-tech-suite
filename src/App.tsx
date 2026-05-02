@@ -20,6 +20,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Gerenciar from "./pages/Gerenciar";
 import Caixa from "./pages/Caixa";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -67,6 +68,7 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/clientes" element={<Clientes />} />
