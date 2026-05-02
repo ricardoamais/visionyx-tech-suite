@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { EmpresaProvider, useEmpresa } from "@/contexts/EmpresaContext";
 import { AppLayout } from "@/components/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Equipamentos from "./pages/Equipamentos";
@@ -51,31 +52,33 @@ function PublicRoute({ children }: { children: ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/clientes" element={<Clientes />} />
-              <Route path="/equipamentos" element={<Equipamentos />} />
-              <Route path="/ordens" element={<OrdensServico />} />
-              <Route path="/orcamentos" element={<Orcamentos />} />
-              <Route path="/financeiro" element={<Financeiro />} />
-              <Route path="/estoque" element={<Estoque />} />
-              <Route path="/relatorios" element={<Relatorios />} />
-              <Route path="/configuracoes" element={<Configuracoes />} />
-              <Route path="/gerenciar" element={<Gerenciar />} />
-              <Route path="/caixa" element={<Caixa />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/clientes" element={<Clientes />} />
+                <Route path="/equipamentos" element={<Equipamentos />} />
+                <Route path="/ordens" element={<OrdensServico />} />
+                <Route path="/orcamentos" element={<Orcamentos />} />
+                <Route path="/financeiro" element={<Financeiro />} />
+                <Route path="/estoque" element={<Estoque />} />
+                <Route path="/relatorios" element={<Relatorios />} />
+                <Route path="/configuracoes" element={<Configuracoes />} />
+                <Route path="/gerenciar" element={<Gerenciar />} />
+                <Route path="/caixa" element={<Caixa />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
