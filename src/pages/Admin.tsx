@@ -80,16 +80,21 @@ export default function Admin() {
 
   const deleteCompany = useMutation({
     mutationFn: async (id: string) => {
-      // All linked data should be deleted via cascade or manually. 
-      // For now we assume regular delete.
-      const { error } = await supabase.from("companies").delete().eq("id", id);
+      const { data, error } = await supabase.functions.invoke('delete-company', {
+        body: { companyId: id }
+      });
+      
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["all_companies"] });
-      toast.success("Conta excluída permanentemente.");
+      toast.success("Empresa e todos os dados vinculados foram excluídos com sucesso.");
     },
-    onError: (e: any) => toast.error("Erro ao excluir: " + e.message),
+    onError: (e: any) => {
+      console.error("Erro ao excluir empresa:", e);
+      toast.error("Erro ao excluir: " + (e.message || "Erro desconhecido"));
+    },
   });
 
   const filtered = companies?.filter(c => 
