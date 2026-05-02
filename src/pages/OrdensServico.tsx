@@ -75,8 +75,11 @@ export default function OrdensServico() {
   const createOS = useCreateOS();
   const updateOS = useUpdateOS();
   const deleteOS = useDeleteOS();
-  
   const { data: empresa } = useEmpresaConfig();
+  const { role } = useAuth();
+  const { data: pecasData } = usePecas();
+  const { data: servicosCatalogo } = useServicosCatalogo();
+  const createConta = useCreateConta();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -84,38 +87,50 @@ export default function OrdensServico() {
   const [viewDialog, setViewDialog] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
   const [legendaUpload, setLegendaUpload] = useState("");
 
+  const form = useForm<OSFormValues>({
+    resolver: zodResolver(osSchema),
+    defaultValues: {
+      cliente_id: "", status: "aberto", valor_mao_obra: 0, valor_pecas: 0,
+      pecas: [], servicos: [],
+    },
+  });
+
+  const { fields: pecasFields, append: appendPeca, remove: removePeca } = useFieldArray({ control: form.control, name: "pecas" });
+  const { fields: servicosFields, append: appendServico, remove: removeServico } = useFieldArray({ control: form.control, name: "servicos" });
+
+  const watchPecas = form.watch("pecas");
+  const watchServicos = form.watch("servicos");
+
+  useEffect(() => {
+    const totalPecas = watchPecas.reduce((acc, p) => acc + (p.quantidade * p.valor_unitario), 0);
+    const totalServicos = watchServicos.reduce((acc, s) => acc + (s.quantidade * s.valor_unitario), 0);
+    form.setValue("valor_pecas", totalPecas);
+    form.setValue("valor_mao_obra", totalServicos);
+  }, [watchPecas, watchServicos, form]);
+
   const { data: fotosEdit } = useOSFotos(editing?.id);
-  const { data: fotosView } = useOSFotos(viewing?.id);
   const addFoto = useAddOSFoto();
   const deleteFoto = useDeleteOSFoto();
 
   const filtered = (ordens ?? []).filter(o => {
-    const matchSearch =
-      o.numero?.toLowerCase().includes(search.toLowerCase()) ||
-      (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = o.numero?.toLowerCase().includes(search.toLowerCase()) || (o as any).clientes?.nome?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || o.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const resetForm = useCallback(() => { setForm(emptyForm); setEditing(null); }, []);
-
-  const openCreate = useCallback(() => {
+  const resetForm = useCallback(() => {
+    form.reset({
+      cliente_id: "", status: "aberto", valor_mao_obra: 0, valor_pecas: 0,
+      pecas: [], servicos: [], problema_relatado: "", diagnostico: "", servicos_realizados: "", observacoes: "",
+    });
     setEditing(null);
-    setForm(emptyForm);
-    setDialogMode("create");
-    refetchClientes();
-  }, [refetchClientes]);
+  }, [form]);
 
-  const closeDialog = useCallback(() => {
-    setDialogMode(null);
-    setEditing(null);
-    setForm(emptyForm);
-    setLegendaUpload("");
-  }, []);
+  const openCreate = useCallback(() => { resetForm(); setDialogMode("create"); refetchClientes(); }, [refetchClientes, resetForm]);
+  const closeDialog = useCallback(() => { setDialogMode(null); resetForm(); }, [resetForm]);
 
   const handlePrint = async (o: any) => {
     let fotos: { url: string; legenda?: string | null }[] = [];
@@ -141,65 +156,82 @@ export default function OrdensServico() {
         await addFoto.mutateAsync({ ordem_servico_id: editing.id, url: data.publicUrl, legenda: legendaUpload || undefined });
         setLegendaUpload("");
         toast.success("Foto adicionada!");
-      } else {
-        setForm(f => ({ ...f, foto_url: data.publicUrl }));
-        toast.success("Foto enviada! Salve a OS e adicione mais fotos editando-a.");
       }
-    } catch (e: any) {
-      toast.error("Erro ao enviar foto: " + e.message);
-    } finally {
-      setUploading(false);
-    }
+    } catch (e: any) { toast.error("Erro ao enviar foto: " + e.message); } finally { setUploading(false); }
   };
 
+  const statusOrder = ["aberto", "em_analise", "aguardando_aprovacao", "em_manutencao", "finalizado", "entregue"];
 
-  const handleSave = () => {
-    if (!form.cliente_id) return;
+  const handleSave = form.handleSubmit(async (values) => {
+    const currentStatusIdx = editing ? statusOrder.indexOf(editing.status) : -1;
+    const newStatusIdx = statusOrder.indexOf(values.status);
+
+    if (editing && role !== "admin" && newStatusIdx < currentStatusIdx) {
+      toast.error("Apenas administradores podem retroceder o status.");
+      return;
+    }
+
+    if (values.status === "finalizado" || values.status === "entregue") {
+      if (!values.diagnostico || !values.servicos_realizados) {
+        toast.error("Diagnóstico e serviços realizados são obrigatórios para finalizar.");
+        return;
+      }
+    }
+
     if (editing) {
       const editingId = editing.id;
-      const payload = { ...form, valor_mao_obra: Number(form.valor_mao_obra), valor_pecas: Number(form.valor_pecas) };
+      const isFinalizing = (values.status === "finalizado" || values.status === "entregue") && (editing.status !== "finalizado" && editing.status !== "entregue");
       closeDialog();
-      updateOS.mutate({ id: editingId, ...payload });
-    } else {
-      const formSnapshot = { ...form };
-      const clienteNome = clientes?.find(c => c.id === form.cliente_id)?.nome ?? "";
-      closeDialog();
-      createOS.mutate({ ...formSnapshot, valor_mao_obra: Number(formSnapshot.valor_mao_obra), valor_pecas: Number(formSnapshot.valor_pecas) }, {
-        onSuccess: async (data) => {
-          if (data) {
-            if (formSnapshot.foto_url) {
-              try { await addFoto.mutateAsync({ ordem_servico_id: data.id, url: formSnapshot.foto_url, legenda: "Foto inicial" }); } catch {}
-            }
-            const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
-            printOS({
-              numero: data.numero, data: data.data_entrada, cliente: clienteNome,
-              problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
-              servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
-              valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
-              empresa, fotoUrl: (data as any).foto_url, fotos,
+      updateOS.mutate({ id: editingId, ...values }, {
+        onSuccess: (data) => {
+          if (isFinalizing) {
+            createConta.mutate({
+              descricao: `OS ${data.numero} - ${(data as any).clientes?.nome || "Cliente"}`,
+              valor: values.valor_mao_obra + values.valor_pecas,
+              vencimento: new Date().toISOString().split("T")[0],
+              tipo: "receber", categoria: "Serviços", status: "pendente",
+            });
+            values.pecas.forEach(async (p) => {
+              const peca = pecasData?.find(item => item.id === p.peca_id);
+              if (peca) await supabase.from("pecas").update({ quantidade: peca.quantidade - p.quantidade }).eq("id", p.peca_id);
             });
           }
+        }
+      });
+    } else {
+      const clienteNome = clientes?.find(c => c.id === values.cliente_id)?.nome ?? "";
+      closeDialog();
+      createOS.mutate(values, {
+        onSuccess: async (data) => {
+          const fotos = (await fetchOSFotos(data.id)).map(f => ({ url: f.url, legenda: f.legenda }));
+          printOS({
+            numero: data.numero, data: data.data_entrada, cliente: clienteNome,
+            problema: data.problema_relatado ?? undefined, diagnostico: data.diagnostico ?? undefined,
+            servicos: data.servicos_realizados ?? undefined, valorMaoObra: Number(data.valor_mao_obra),
+            valorPecas: Number(data.valor_pecas), status: statusLabel(data.status), observacoes: data.observacoes ?? undefined,
+            empresa, fotoUrl: (data as any).foto_url, fotos,
+          });
         },
       });
     }
-  };
+  });
 
   const handleEdit = useCallback((o: any) => {
     setEditing(null);
-    setForm(emptyForm);
     requestAnimationFrame(() => {
       setEditing(o);
-      setForm({
-        cliente_id: o.cliente_id, problema_relatado: o.problema_relatado ?? "",
-        diagnostico: o.diagnostico ?? "", servicos_realizados: o.servicos_realizados ?? "",
-        valor_mao_obra: o.valor_mao_obra ?? 0, valor_pecas: o.valor_pecas ?? 0,
-        status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
-        foto_url: o.foto_url ?? "",
+      form.reset({
+        cliente_id: o.cliente_id, equipamento_id: o.equipamento_id,
+        problema_relatado: o.problema_relatado ?? "", diagnostico: o.diagnostico ?? "",
+        servicos_realizados: o.servicos_realizados ?? "", valor_mao_obra: o.valor_mao_obra ?? 0,
+        valor_pecas: o.valor_pecas ?? 0, status: o.status ?? "aberto", observacoes: o.observacoes ?? "",
+        pecas: (o.os_pecas || []).map((p: any) => ({ peca_id: p.peca_id, quantidade: p.quantidade, valor_unitario: p.valor_unitario })),
+        servicos: (o.os_servicos || []).map((s: any) => ({ descricao: s.descricao, quantidade: s.quantidade, valor_unitario: s.valor_unitario, servico_catalogo_id: s.servico_catalogo_id })),
       });
       setDialogMode("edit");
       refetchClientes();
     });
-  }, [refetchClientes]);
+  }, [refetchClientes, form]);
 
   const isSaving = createOS.isPending || updateOS.isPending;
 
