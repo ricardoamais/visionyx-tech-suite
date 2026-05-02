@@ -9,10 +9,7 @@ export function useEmpresaConfig() {
     queryKey: ["company_config", companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("*")
-        .maybeSingle();
+       const { data, error } = await supabase.from("companies").select("*").eq("id", companyId).maybeSingle();
       if (error) throw error;
       return data;
     },
