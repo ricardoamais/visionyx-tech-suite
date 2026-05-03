@@ -30,15 +30,23 @@ export function useCreateOrcamento() {
       status?: string;
       itens: { descricao: string; quantidade: number; valor_unitario: number }[];
     }) => {
-      if (!companyId) throw new Error("Empresa não definida");
-      const { itens, ...orcData } = input;
-      const valor_total = itens.reduce((sum, i) => sum + i.quantidade * i.valor_unitario, 0);
-      const { data, error } = await supabase
-        .from("orcamentos")
-        .insert({ ...orcData, valor_total, company_id: companyId } as any)
-        .select("*, clientes(nome)")
-        .single();
-      if (error) throw error;
+       if (!companyId) throw new Error("Empresa não definida");
+       const { itens, ...orcData } = input;
+       const valor_total = itens.reduce((sum, i) => sum + i.quantidade * i.valor_unitario, 0);
+ 
+       const sanitized = {
+         ...orcData,
+         valor_total,
+         company_id: companyId,
+         cliente_id: orcData.cliente_id || null,
+       };
+ 
+       const { data, error } = await supabase
+         .from("orcamentos")
+         .insert(sanitized as any)
+         .select("*, clientes(nome)")
+         .single();
+       if (error) throw error;
 
       if (itens.length > 0) {
         const { error: itensError } = await supabase
@@ -56,9 +64,14 @@ export function useCreateOrcamento() {
 export function useUpdateOrcamento() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; cliente_id?: string; observacoes?: string | null; status?: "pendente" | "aprovado" | "reprovado"; valor_total?: number }) => {
-      const { data, error } = await supabase.from("orcamentos").update(input).eq("id", id).select().single();
-      if (error) throw error;
+     mutationFn: async ({ id, ...input }: { id: string; cliente_id?: string; observacoes?: string | null; status?: "pendente" | "aprovado" | "reprovado"; valor_total?: number }) => {
+       const sanitized = {
+         ...input,
+         cliente_id: input.cliente_id || null,
+       };
+ 
+       const { data, error } = await supabase.from("orcamentos").update(sanitized as any).eq("id", id).select().single();
+       if (error) throw error;
       return data;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["orcamentos"] }); toast.success("Orçamento atualizado!"); },
