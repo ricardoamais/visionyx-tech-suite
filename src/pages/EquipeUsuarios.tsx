@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
- import { Loader2, Pencil, KeyRound, ShieldCheck, UserPlus, Mail, CreditCard, Settings, Check, Ban, DollarSign, Users, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Loader2, Pencil, KeyRound, ShieldCheck, UserPlus, Mail, CreditCard, Settings, Check, Ban, Users, ShieldAlert, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface ManagedUser {
   id: string;
@@ -59,13 +60,13 @@ function useUsers() {
   });
 }
 
-export default function Gerenciar() {
+export default function EquipeUsuarios() {
   const { data: isAdmin, isLoading: checkingAdmin } = useIsAdmin();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user: currentUser } = useAuth();
   const { data: users, isLoading } = useUsers();
   const qc = useQueryClient();
 
-  const { data: companies, isLoading: loadingCompanies } = useQuery({
+  const { data: companies } = useQuery({
     queryKey: ["managed_companies"],
     enabled: isSuperAdmin,
     queryFn: async () => {
@@ -78,7 +79,7 @@ export default function Gerenciar() {
     },
   });
 
-  const { data: platformSettings, isLoading: loadingSettings } = useQuery({
+  const { data: platformSettings } = useQuery({
     queryKey: ["platform_settings_admin"],
     enabled: isSuperAdmin,
     queryFn: async () => {
@@ -132,6 +133,8 @@ export default function Gerenciar() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteNome, setInviteNome] = useState("");
   const [inviteRole, setInviteRole] = useState("tecnico");
+
+  const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null);
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
@@ -189,11 +192,29 @@ export default function Gerenciar() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("manage-users", {
+        body: { action: "delete", userId },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+      });
+      if (res.error) throw new Error(res.error.message);
+      if (res.data?.error) throw new Error(res.data.error);
+    },
+    onSuccess: () => {
+      toast.success("Usuário removido com sucesso!");
+      setUserToDelete(null);
+      qc.invalidateQueries({ queryKey: ["managed_users"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (checkingAdmin) {
     return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isSuperAdmin) {
     return <Navigate to="/" replace />;
   }
 
@@ -212,28 +233,28 @@ export default function Gerenciar() {
 
   useEffect(() => {
     if (platformSettings) {
-      setPixKey(platformSettings.pix_key);
-      setPixName(platformSettings.pix_name);
-      setPriceFree(platformSettings.price_free.toString());
-      setPricePro(platformSettings.price_pro.toString());
-      setPriceEnterprise(platformSettings.price_enterprise.toString());
+      setPixKey(platformSettings.pix_key || "");
+      setPixName(platformSettings.pix_name || "");
+      setPriceFree(platformSettings.price_free?.toString() || "0");
+      setPricePro(platformSettings.price_pro?.toString() || "0");
+      setPriceEnterprise(platformSettings.price_enterprise?.toString() || "0");
     }
   }, [platformSettings]);
 
-   return (
-     <div className="space-y-6">
-       <PageHeader title="Gerenciar Equipe" description="Gestão de usuários e permissões da sua empresa">
-         <div className="flex gap-2">
-           {isSuperAdmin && (
-             <Button variant="outline" onClick={() => window.location.href = '/admin'}>
-               <ShieldAlert className="w-4 h-4 mr-2" /> Painel da Plataforma (Pix)
-             </Button>
-           )}
-           <Button onClick={() => setIsInviteOpen(true)}><UserPlus className="w-4 h-4 mr-2" /> Convidar Usuário</Button>
-         </div>
-       </PageHeader>
- 
-       <Tabs defaultValue="users" className="space-y-4">
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Equipe / Usuários" description="Gestão de usuários e permissões da sua empresa">
+        <div className="flex gap-2">
+          {isSuperAdmin && (
+            <Button variant="outline" onClick={() => window.location.href = '/admin'}>
+              <ShieldAlert className="w-4 h-4 mr-2" /> Painel da Plataforma (Pix)
+            </Button>
+          )}
+          <Button onClick={() => setIsInviteOpen(true)}><UserPlus className="w-4 h-4 mr-2" /> Convidar Usuário</Button>
+        </div>
+      </PageHeader>
+
+      <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="bg-muted/50 p-1 border">
           <TabsTrigger value="users" className="gap-2"><Users className="w-4 h-4" /> Usuários</TabsTrigger>
           {isSuperAdmin && (
@@ -281,11 +302,16 @@ export default function Gerenciar() {
                           <TableCell>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString("pt-BR") : "—"}</TableCell>
                           <TableCell className="text-right space-x-1">
                             <Button variant="outline" size="sm" onClick={() => openEdit(u)}>
-                              <Pencil className="w-4 h-4 mr-1" /> Editar
+                              <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => { setResetUser(u); setNewPassword(""); }}>
-                              <KeyRound className="w-4 h-4 mr-1" /> Senha
+                            <Button variant="outline" size="sm" onClick={() => { setResetUser(u); setNewPassword(""); }} title="Resetar Senha">
+                              <KeyRound className="w-4 h-4" />
                             </Button>
+                            {u.id !== currentUser?.id && (
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setUserToDelete(u)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -303,45 +329,6 @@ export default function Gerenciar() {
         {isSuperAdmin && (
           <>
             <TabsContent value="billing" className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Empresas Ativas</CardTitle>
-                    <Check className="h-4 h-4 text-green-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'active').length || 0}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-                    <CreditCard className="h-4 h-4 text-yellow-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'pending').length || 0}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Vencidas</CardTitle>
-                    <AlertTriangle className="h-4 h-4 text-orange-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'overdue' || (c.payment_status !== 'active' && new Date(c.plan_expires_at) < new Date())).length || 0}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Bloqueadas</CardTitle>
-                    <Ban className="h-4 h-4 text-red-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{companies?.filter(c => c.payment_status === 'blocked').length || 0}</div>
-                  </CardContent>
-                </Card>
-              </div>
-
               <Card className="glass-card">
                 <CardHeader><CardTitle className="text-base">Gestão de Mensalidades</CardTitle></CardHeader>
                 <CardContent>
@@ -350,7 +337,6 @@ export default function Gerenciar() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Empresa</TableHead>
-                          <TableHead>Plano</TableHead>
                           <TableHead>Vencimento</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
@@ -358,29 +344,23 @@ export default function Gerenciar() {
                       </TableHeader>
                       <TableBody>
                         {companies?.map((c) => {
-                          const isExpired = new Date(c.plan_expires_at) < new Date();
+                          const isExpired = c.plan_expires_at ? new Date(c.plan_expires_at) < new Date() : false;
                           return (
                             <TableRow key={c.id}>
                               <TableCell className="font-medium">{c.name}</TableCell>
-                              <TableCell className="capitalize">{c.plan || 'Free'}</TableCell>
-                              <TableCell>{new Date(c.plan_expires_at).toLocaleDateString("pt-BR")}</TableCell>
+                              <TableCell>{c.plan_expires_at ? new Date(c.plan_expires_at).toLocaleDateString("pt-BR") : "—"}</TableCell>
                               <TableCell>
-                                <Badge variant={c.payment_status === 'active' ? 'default' : c.payment_status === 'pending' ? 'secondary' : 'destructive'}>
-                                  {c.payment_status === 'active' ? 'Ativo' : c.payment_status === 'pending' ? 'Pendente' : isExpired ? 'Vencido' : 'Bloqueado'}
+                                <Badge variant={c.payment_status === 'active' ? 'default' : 'destructive'}>
+                                  {c.payment_status === 'active' ? 'Ativo' : isExpired ? 'Vencido' : 'Bloqueado'}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right space-x-1">
-                                <Button variant="outline" size="sm" className="h-8 px-2" onClick={() => {
+                                <Button variant="outline" size="sm" onClick={() => {
                                   const nextExpiry = new Date();
                                   nextExpiry.setDate(nextExpiry.getDate() + 30);
                                   updateCompanyPaymentMutation.mutate({ id: c.id, status: 'active', expiresAt: nextExpiry.toISOString() });
                                 }}>
                                   Confirmar Pgto
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-8 px-2 text-red-500 hover:text-red-600" onClick={() => {
-                                  updateCompanyPaymentMutation.mutate({ id: c.id, status: 'blocked' });
-                                }}>
-                                  Bloquear
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -398,35 +378,15 @@ export default function Gerenciar() {
                 <CardHeader><CardTitle className="text-base">Configurações de Cobrança (Pix)</CardTitle></CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-2">
-                    <Label>Chave Pix (Email, CPF, CNPJ ou Celular)</Label>
-                    <Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="ex: amaiscontratos@gmail.com" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Nome do Recebedor</Label>
-                    <Input value={pixName} onChange={(e) => setPixName(e.target.value)} placeholder="ex: Ricardo Amais" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="grid gap-2">
-                      <Label>Mensalidade Free</Label>
-                      <Input type="number" value={priceFree} onChange={(e) => setPriceFree(e.target.value)} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Mensalidade Pro</Label>
-                      <Input type="number" value={pricePro} onChange={(e) => setPricePro(e.target.value)} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Mensalidade Enterprise</Label>
-                      <Input type="number" value={priceEnterprise} onChange={(e) => setPriceEnterprise(e.target.value)} />
-                    </div>
+                    <Label>Chave Pix</Label>
+                    <Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} />
                   </div>
                   <Button className="w-full" onClick={() => updateSettingsMutation.mutate({
                     pix_key: pixKey,
-                    pix_name: pixName,
                     price_free: Number(priceFree),
                     price_pro: Number(pricePro),
                     price_enterprise: Number(priceEnterprise)
                   })} disabled={updateSettingsMutation.isPending}>
-                    {updateSettingsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Salvar Configurações
                   </Button>
                 </CardContent>
@@ -436,69 +396,12 @@ export default function Gerenciar() {
         )}
       </Tabs>
 
-      {/* Keep existing dialogs below */}
-
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5" /> Usuários do Sistema
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Perfil</TableHead>
-                    <TableHead>Cadastro</TableHead>
-                    <TableHead>Último Acesso</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users?.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell className="font-medium">{u.nome}</TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={u.role === "admin" ? "default" : u.role === "financeiro" ? "outline" : "secondary"}>
-                          {u.role === "admin" ? "Admin" : u.role === "financeiro" ? "Financeiro" : "Técnico"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(u.created_at).toLocaleDateString("pt-BR")}</TableCell>
-                      <TableCell>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString("pt-BR") : "—"}</TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(u)}>
-                          <Pencil className="w-4 h-4 mr-1" /> Editar
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => { setResetUser(u); setNewPassword(""); }}>
-                          <KeyRound className="w-4 h-4 mr-1" /> Senha
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!users || users.length === 0) && (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Usuário</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2"><Label>Nome</Label><Input value={editNome} onChange={(e) => setEditNome(e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Telefone</Label><Input value={editTelefone} onChange={(e) => setEditTelefone(e.target.value)} /></div>
             <div className="grid gap-2">
               <Label>Perfil</Label>
               <Select value={editRole} onValueChange={setEditRole}>
@@ -513,9 +416,7 @@ export default function Gerenciar() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
-            <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>
-              {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Salvar
-            </Button>
+            <Button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -525,8 +426,8 @@ export default function Gerenciar() {
         <DialogContent>
           <DialogHeader><DialogTitle>Convidar Novo Usuário</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid gap-2"><Label>Nome</Label><Input value={inviteNome} onChange={(e) => setInviteNome(e.target.value)} placeholder="Nome completo" /></div>
-            <div className="grid gap-2"><Label>Email</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
+            <div className="grid gap-2"><Label>Nome</Label><Input value={inviteNome} onChange={(e) => setInviteNome(e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Email</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} /></div>
             <div className="grid gap-2">
               <Label>Perfil</Label>
               <Select value={inviteRole} onValueChange={setInviteRole}>
@@ -541,9 +442,7 @@ export default function Gerenciar() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsInviteOpen(false)}>Cancelar</Button>
-            <Button onClick={() => inviteMutation.mutate()} disabled={inviteMutation.isPending || !inviteEmail || !inviteNome}>
-              {inviteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} <Mail className="w-4 h-4 mr-2" /> Enviar Convite
-            </Button>
+            <Button onClick={() => inviteMutation.mutate()} disabled={inviteMutation.isPending}>Enviar Convite</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -553,16 +452,35 @@ export default function Gerenciar() {
         <DialogContent>
           <DialogHeader><DialogTitle>Redefinir Senha — {resetUser?.nome}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid gap-2"><Label>Nova Senha</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" /></div>
+            <div className="grid gap-2"><Label>Nova Senha</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setResetUser(null)}>Cancelar</Button>
-            <Button onClick={() => resetMutation.mutate()} disabled={resetMutation.isPending || newPassword.length < 6}>
-              {resetMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />} Redefinir
-            </Button>
+            <Button onClick={() => resetMutation.mutate()} disabled={resetMutation.isPending}>Redefinir</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(o) => !o && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja remover este usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação irá remover o acesso de <strong>{userToDelete?.nome}</strong> ({userToDelete?.email}) permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => userToDelete && deleteMutation.mutate(userToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remover Usuário
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
