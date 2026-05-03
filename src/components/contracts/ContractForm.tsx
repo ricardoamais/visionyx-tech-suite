@@ -29,23 +29,6 @@
  import { useCreateContract, useUpdateContract } from "@/hooks/useMaintenanceContracts";
  import { useEffect } from "react";
  
- const contractSchema = z.zodResolver ? z.object({
-   empresa_nome: z.string().min(1, "Nome da empresa é obrigatório"),
-   cnpj: z.string().optional(),
-   contato_nome: z.string().optional(),
-   contato_telefone: z.string().optional(),
-   contato_email: z.string().email("Email inválido").optional().or(z.literal("")),
-   endereco: z.string().optional(),
-   valor_mensal: z.number().min(0),
-   dia_vencimento: z.number().min(1).max(28),
-   data_inicio: z.string().min(1, "Data de início é obrigatória"),
-   data_fim: z.string().optional().nullable(),
-   descricao_servicos: z.string().optional(),
-   observacoes: z.string().optional(),
-   status: z.enum(["Ativo", "Inativo", "Encerrado"]),
- }) : z.any(); // Fallback if zod is weird
- 
- // Redefining schema because of possible zod issues in some environments
  const schema = z.object({
    empresa_nome: z.string().min(1, "Obrigatório"),
    cnpj: z.string().optional(),
