@@ -42,137 +42,189 @@ export function AppSidebar() {
   const { company } = useEmpresa();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isActive = (path: string) => location.pathname === path;
-  const isAdmin = role === "admin";
-
+   const isAdmin = role === "admin";
+ 
    const filteredManagementItems = managementItems.filter(item => 
      isAdmin || !["Financeiro"].includes(item.title)
    );
-
-  return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4 border-b border-sidebar-border/50">
-        <div className="flex items-center gap-3">
-          {company?.logo_url ? (
-            <img
-              src={company.logo_url}
-              alt="Logo"
-              className="w-8 h-8 rounded-md object-cover flex-shrink-0"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs font-bold">
-                {company?.name?.charAt(0) ?? 'V'}
-              </span>
-            </div>
-          )}
-          {!collapsed && (
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight truncate">
-                {company?.name || "Visionyx"}
-              </h1>
-              <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider font-medium">
-                Assistência Técnica
-              </p>
-            </div>
-          )}
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[11px] uppercase tracking-wider">Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url} end={item.url === "/"}>
-                      <item.icon className="w-4 h-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[11px] uppercase tracking-wider">Gestão</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {filteredManagementItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <NavLink to={item.url}>
-                      <item.icon className="w-4 h-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {isAdmin && !isSuperAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/equipe")}>
-                    <NavLink to="/equipe">
-                      <ShieldCheck className="w-4 h-4" />
-                      {!collapsed && <span>Equipe</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-               {isSuperAdmin && (
-                 <>
+ 
+   const { data: profile } = useQuery({
+     queryKey: ["profile", user?.id],
+     enabled: !!user,
+     queryFn: async () => {
+       const { data } = await supabase.from("profiles").select("nome").eq("user_id", user!.id).maybeSingle();
+       return data;
+     },
+   });
+ 
+   return (
+     <Sidebar collapsible="icon" className="border-r border-sidebar-border/30">
+       <SidebarHeader className="p-6 border-b border-sidebar-border/50 bg-sidebar/50">
+         <div className="flex items-center gap-4">
+           <div className="relative group/logo">
+             {company?.logo_url ? (
+               <img
+                 src={company.logo_url}
+                 alt="Logo"
+                 className="w-10 h-10 rounded-xl object-cover flex-shrink-0 shadow-lg group-hover/logo:scale-105 transition-transform"
+               />
+             ) : (
+               <div className="w-10 h-10 rounded-xl grad-blue flex items-center justify-center flex-shrink-0 shadow-lg group-hover/logo:scale-105 transition-transform">
+                 <span className="text-white text-base font-bold">
+                   {company?.name?.charAt(0) ?? 'V'}
+                 </span>
+               </div>
+             )}
+           </div>
+           {!collapsed && (
+             <div className="min-w-0 flex flex-col">
+               <h1 className="text-base font-bold text-sidebar-foreground tracking-tight truncate leading-tight">
+                 {company?.name || "Visionyx"}
+               </h1>
+               <p className="text-[10px] text-muted-foreground truncate uppercase tracking-[0.1em] font-semibold mt-0.5 opacity-70">
+                 Enterprise ERP
+               </p>
+             </div>
+           )}
+         </div>
+       </SidebarHeader>
+ 
+       <SidebarContent className="px-3 py-4 space-y-4">
+         <SidebarGroup>
+           <SidebarGroupLabel className="px-3 text-sidebar-foreground/30 text-[10px] uppercase font-bold tracking-widest mb-2">Menu Principal</SidebarGroupLabel>
+           <SidebarGroupContent>
+             <SidebarMenu>
+               {mainItems.map((item) => (
+                 <SidebarMenuItem key={item.title}>
+                   <SidebarMenuButton 
+                    asChild 
+                    isActive={isActive(item.url)} 
+                    tooltip={item.title}
+                    className={`relative h-10 px-3 transition-all duration-200 group/btn
+                      ${isActive(item.url) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}
+                    `}
+                   >
+                     <NavLink to={item.url} end={item.url === "/"} className="flex items-center w-full">
+                       {isActive(item.url) && !collapsed && (
+                         <div className="absolute left-0 top-2 bottom-2 w-[3px] grad-blue rounded-r-full" />
+                       )}
+                       <div className={`p-1.5 rounded-lg transition-colors group-hover/btn:bg-sidebar-accent/80 ${isActive(item.url) ? 'bg-sidebar-accent/50' : ''}`}>
+                        <item.icon className={`w-4 h-4 ${isActive(item.url) ? 'text-primary' : item.color}`} />
+                       </div>
+                       {!collapsed && <span className="ml-3 font-medium text-[13px]">{item.title}</span>}
+                     </NavLink>
+                   </SidebarMenuButton>
+                 </SidebarMenuItem>
+               ))}
+             </SidebarMenu>
+           </SidebarGroupContent>
+         </SidebarGroup>
+ 
+         <div className="mx-3 h-[1px] bg-sidebar-border/30" />
+ 
+         <SidebarGroup>
+           <SidebarGroupLabel className="px-3 text-sidebar-foreground/30 text-[10px] uppercase font-bold tracking-widest mb-2">Administração</SidebarGroupLabel>
+           <SidebarGroupContent>
+             <SidebarMenu>
+               {filteredManagementItems.map((item) => (
+                 <SidebarMenuItem key={item.title}>
+                   <SidebarMenuButton 
+                    asChild 
+                    isActive={isActive(item.url)} 
+                    tooltip={item.title}
+                    className={`relative h-10 px-3 transition-all duration-200 group/btn
+                      ${isActive(item.url) ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}
+                    `}
+                   >
+                     <NavLink to={item.url} className="flex items-center w-full">
+                       {isActive(item.url) && !collapsed && (
+                         <div className="absolute left-0 top-2 bottom-2 w-[3px] grad-blue rounded-r-full" />
+                       )}
+                       <div className={`p-1.5 rounded-lg transition-colors group-hover/btn:bg-sidebar-accent/80 ${isActive(item.url) ? 'bg-sidebar-accent/50' : ''}`}>
+                        <item.icon className={`w-4 h-4 ${isActive(item.url) ? 'text-primary' : item.color}`} />
+                       </div>
+                       {!collapsed && <span className="ml-3 font-medium text-[13px]">{item.title}</span>}
+                     </NavLink>
+                   </SidebarMenuButton>
+                 </SidebarMenuItem>
+               ))}
+               {(isAdmin || isSuperAdmin) && (
+                 <SidebarMenuItem>
                    <SidebarMenuItem>
-                     <SidebarMenuButton asChild isActive={isActive("/admin")}>
-                       <NavLink to="/admin">
-                         <ShieldAlert className="w-4 h-4" />
-                         {!collapsed && <span>Gerenciar Plataforma</span>}
+                     <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive("/equipe")} 
+                      tooltip="Equipe"
+                      className={`relative h-10 px-3 transition-all duration-200 group/btn
+                        ${isActive("/equipe") ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}
+                      `}
+                     >
+                       <NavLink to="/equipe" className="flex items-center w-full">
+                         {isActive("/equipe") && !collapsed && (
+                           <div className="absolute left-0 top-2 bottom-2 w-[3px] grad-blue rounded-r-full" />
+                         )}
+                         <div className={`p-1.5 rounded-lg transition-colors group-hover/btn:bg-sidebar-accent/80 ${isActive("/equipe") ? 'bg-sidebar-accent/50' : ''}`}>
+                          <ShieldCheck className={`w-4 h-4 ${isActive("/equipe") ? 'text-primary' : 'text-indigo-400'}`} />
+                         </div>
+                         {!collapsed && <span className="ml-3 font-medium text-[13px]">Equipe / Usuários</span>}
                        </NavLink>
                      </SidebarMenuButton>
                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild isActive={isActive("/equipe")}>
-                        <NavLink to="/equipe">
-                          <ShieldCheck className="w-4 h-4" />
-                          {!collapsed && <span>Equipe / Usuários</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                 </>
+                 </SidebarMenuItem>
                )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-       <SidebarFooter className="p-3 border-t border-sidebar-border space-y-1">
+             </SidebarMenu>
+           </SidebarGroupContent>
+         </SidebarGroup>
+       </SidebarContent>
+ 
+       <SidebarFooter className="p-4 border-t border-sidebar-border/30 bg-sidebar/30">
          <SidebarMenu>
            <SidebarMenuItem>
+              <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : 'px-2 py-3 bg-white/5 rounded-xl border border-white/5'}`}>
+                 <div className="relative">
+                   <div className="w-9 h-9 rounded-lg grad-purple flex items-center justify-center border border-white/10 shadow-md">
+                     <span className="text-xs font-bold text-white">
+                       {profile?.nome?.substring(0, 2).toUpperCase() || "US"}
+                     </span>
+                   </div>
+                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-sidebar-background rounded-full" />
+                 </div>
+                 {!collapsed && (
+                   <div className="min-w-0 flex-1">
+                     <p className="text-xs font-bold text-sidebar-foreground truncate">{profile?.nome || "Usuário"}</p>
+                     <p className="text-[10px] text-muted-foreground truncate uppercase font-medium opacity-60">
+                       {role === 'admin' ? 'Administrador' : 'Técnico'}
+                     </p>
+                   </div>
+                 )}
+                 {!collapsed && (
+                   <button 
+                     onClick={signOut}
+                     className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-400 hover:bg-rose-400/10 transition-colors"
+                     title="Sair do sistema"
+                   >
+                     <LogOut className="w-4 h-4" />
+                   </button>
+                 )}
+              </div>
+           </SidebarMenuItem>
+ 
+           <SidebarMenuItem className="mt-2">
              <SidebarMenuButton
                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
                tooltip={collapsed ? (resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro") : undefined}
+               className="h-9 px-3 opacity-60 hover:opacity-100 transition-opacity"
              >
                {resolvedTheme === "dark" ? (
-                 <Sun className="w-4 h-4 transition-all" />
+                 <Sun className="w-4 h-4" />
                ) : (
-                 <Moon className="w-4 h-4 transition-all" />
+                 <Moon className="w-4 h-4" />
                )}
-               {!collapsed && <span>{resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>}
-             </SidebarMenuButton>
-           </SidebarMenuItem>
-           <SidebarMenuItem>
-             <SidebarMenuButton 
-               onClick={signOut}
-               className="text-destructive hover:text-destructive hover:bg-destructive/10"
-               tooltip={collapsed ? "Sair" : undefined}
-             >
-               <LogOut className="w-4 h-4" />
-               {!collapsed && <span>Sair</span>}
+               {!collapsed && <span className="text-xs font-medium">{resolvedTheme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>}
              </SidebarMenuButton>
            </SidebarMenuItem>
          </SidebarMenu>
        </SidebarFooter>
-    </Sidebar>
-  );
+     </Sidebar>
+   );
 }
