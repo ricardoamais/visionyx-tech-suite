@@ -293,18 +293,13 @@ export default function Orcamentos() {
                           )}
                           <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir o orçamento {o.numero}?</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteOrc.mutate(o.id)} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={() => setDeleteModal({ open: true, id: o.id, numero: o.numero })}
+                           >
+                             <Trash2 className="w-4 h-4 text-destructive" />
+                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -344,7 +339,16 @@ export default function Orcamentos() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
+       </Dialog>
+ 
+       <DeleteConfirmationModal
+         isOpen={deleteModal.open}
+         onClose={() => setDeleteModal({ ...deleteModal, open: false })}
+         onConfirm={() => handleDelete(deleteModal.id, deleteModal.numero)}
+         title={`⚠️ Excluir Orçamento ${deleteModal.numero}?`}
+         description="Essa ação é irreversível. Todos os dados vinculados serão excluídos permanentemente: pagamentos, movimentos de caixa, itens e registros financeiros."
+         isLoading={isDeleting}
+       />
     </div>
   );
 }
