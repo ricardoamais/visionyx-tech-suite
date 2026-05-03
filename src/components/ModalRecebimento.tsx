@@ -61,51 +61,57 @@
        
        if (updateErr) throw updateErr;
  
-       // 2. Inserir em contas
-       const { error: contaErr } = await supabase.from('contas').insert({
-         company_id: companyId,
-         descricao: `${data.numero} - ${data.cliente_nome}`,
-         valor: totalFinal,
-         vencimento: new Date().toISOString().split('T')[0],
-         tipo: 'receber',
-         categoria: data.tipo === 'os' ? 'Serviços' : 'Orçamentos',
-         status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
-         forma_pagamento: finalFormaPagamento,
-       } as any);
+       // 2. Atualizar ou Inserir em contas
+       // Tentar encontrar se já existe uma conta para esta OS/Orcamento
+       const { data: existingConta } = await supabase
+         .from('contas')
+         .select('id')
+         .eq(data.tipo === 'os' ? 'ordem_servico_id' : 'orcamento_id', data.id)
+         .maybeSingle();
+
+       if (existingConta) {
+         const { error: contaErr } = await supabase
+           .from('contas')
+           .update({
+             status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
+             forma_pagamento: finalFormaPagamento,
+             valor: totalFinal,
+           } as any)
+           .eq('id', existingConta.id);
+         if (contaErr) throw contaErr;
+       } else {
+         const { error: contaErr } = await supabase.from('contas').insert({
+           company_id: companyId,
+           descricao: `${data.numero} - ${data.cliente_nome}`,
+           valor: totalFinal,
+           vencimento: new Date().toISOString().split('T')[0],
+           tipo: 'receber',
+           categoria: data.tipo === 'os' ? 'Serviços' : 'Orçamentos',
+           status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
+           forma_pagamento: finalFormaPagamento,
+           ordem_servico_id: data.tipo === 'os' ? data.id : null,
+           orcamento_id: data.tipo === 'orcamento' ? data.id : null,
+         } as any);
+         if (contaErr) throw contaErr;
+       }
  
-       if (contaErr) throw contaErr;
- 
-       // 3. Se não for fiado, lançar na tabela de vendas (que integra com o Caixa)
+       // 3. Se não for fiado, lançar no caixa_movimentos
        if (finalFormaPagamento !== 'fiado') {
          if (!caixaAberto) {
-             toast.warning("Pagamento registrado no financeiro, mas o caixa está fechado. A venda não foi lançada no caixa.");
+           toast.warning("Pagamento registrado no financeiro, mas o caixa está fechado.");
          } else {
-             // Criar a venda vinculada ao caixa
-             const { data: venda, error: vendaErr } = await supabase.from('vendas').insert({
-                 company_id: companyId,
-                 caixa_id: caixaAberto.id,
-                 cliente_id: data.cliente_id,
-                 forma_pagamento: finalFormaPagamento,
-                 valor_total: totalFinal,
-                 observacoes: observacao || `Recebimento ${data.numero}`,
-                 ordem_servico_id: data.tipo === 'os' ? data.id : null,
-                 orcamento_id: data.tipo === 'orcamento' ? data.id : null,
-                 origem: data.tipo
-             } as any).select().single();
+           const { error: movErr } = await supabase.from('caixa_movimentos').insert({
+             company_id: companyId,
+             caixa_id: caixaAberto.id,
+             tipo: 'entrada',
+             valor: totalFinal,
+             descricao: `${data.numero} - ${data.cliente_nome}`,
+             forma_pagamento: finalFormaPagamento,
+             origem: data.tipo,
+             origem_id: data.id,
+           } as any);
  
-             if (vendaErr) throw vendaErr;
- 
-             // Se houver itens, detalhar na venda
-             if (data.items && data.items.length > 0) {
-                 const vendaItens = data.items.map(item => ({
-                     company_id: companyId,
-                     venda_id: venda.id,
-                     peca_id: item.peca_id,
-                     quantidade: item.quantidade,
-                     valor_unitario: item.valor_unitario
-                 }));
-                 await supabase.from('venda_itens').insert(vendaItens);
-             }
+           if (movErr) throw movErr;
          }
        }
  
