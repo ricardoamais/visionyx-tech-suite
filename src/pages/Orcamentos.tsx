@@ -1,5 +1,5 @@
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useState, useCallback } from "react";
+ import { useState, useCallback } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,14 +15,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, ArrowRight, CheckCircle } from "lucide-react";
- import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento, useDeleteOrcamento } from "@/hooks/useOrcamentos";
+  import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento } from "@/hooks/useOrcamentos";
+  import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
  import { ModalRecebimento } from "@/components/ModalRecebimento";
 import { useCreateOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOrcamento } from "@/components/PrintOS";
- import { toast } from "sonner";
+  import { toast } from "sonner";
+  import { supabase } from "@/integrations/supabase/client";
  import { QuickAddCliente } from "@/components/QuickAddCliente";
 
 const statusMap: Record<string, string> = { pendente: "Pendente", aprovado: "Aprovado", reprovado: "Reprovado" };
@@ -43,11 +45,38 @@ const orcamentoSchema = z.object({
 type OrcamentoFormValues = z.infer<typeof orcamentoSchema>;
 
 export default function Orcamentos() {
-  const { data: orcamentos, isLoading } = useOrcamentos();
-  const { data: clientes, refetch: refetchClientes } = useClientes();
-  const createOrc = useCreateOrcamento();
-  const updateOrc = useUpdateOrcamento();
-  const deleteOrc = useDeleteOrcamento();
+   const queryClient = useQueryClient();
+   const { data: orcamentos, isLoading } = useOrcamentos();
+   const { data: clientes, refetch: refetchClientes } = useClientes();
+   const createOrc = useCreateOrcamento();
+   const updateOrc = useUpdateOrcamento();
+ 
+   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string; numero: string }>({ open: false, id: "", numero: "" });
+   const [isDeleting, setIsDeleting] = useState(false);
+ 
+   const handleDelete = async (id: string, numero: string) => {
+     try {
+       setIsDeleting(true);
+       const { error } = await supabase.functions.invoke('delete-orcamento', {
+         body: { orcId: id }
+       });
+       
+       if (error) throw error;
+ 
+       toast.success(`Orçamento ${numero} excluído com sucesso`);
+       queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
+       queryClient.invalidateQueries({ queryKey: ['contas'] });
+       queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
+       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+       queryClient.invalidateQueries({ queryKey: ['relatorios'] });
+       setDeleteModal({ open: false, id: "", numero: "" });
+     } catch (err: any) {
+       console.error(err);
+       toast.error('Erro ao excluir orçamento: ' + (err.message || 'Erro desconhecido'));
+     } finally {
+       setIsDeleting(false);
+     }
+   };
   const createOS = useCreateOS();
   const createConta = useCreateConta();
   const { data: empresa } = useEmpresaConfig();
@@ -264,18 +293,13 @@ export default function Orcamentos() {
                           )}
                           <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir o orçamento {o.numero}?</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteOrc.mutate(o.id)} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={() => setDeleteModal({ open: true, id: o.id, numero: o.numero })}
+                           >
+                             <Trash2 className="w-4 h-4 text-destructive" />
+                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -315,7 +339,16 @@ export default function Orcamentos() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
+       </Dialog>
+ 
+       <DeleteConfirmationModal
+         isOpen={deleteModal.open}
+         onClose={() => setDeleteModal({ ...deleteModal, open: false })}
+         onConfirm={() => handleDelete(deleteModal.id, deleteModal.numero)}
+         title={`⚠️ Excluir Orçamento ${deleteModal.numero}?`}
+         description="Essa ação é irreversível. Todos os dados vinculados serão excluídos permanentemente: pagamentos, movimentos de caixa, itens e registros financeiros."
+         isLoading={isDeleting}
+       />
     </div>
   );
 }

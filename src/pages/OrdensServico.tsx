@@ -1,5 +1,5 @@
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useState, useCallback, useEffect } from "react";
+ import { useState, useCallback, useEffect } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,7 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, CheckCircle } from "lucide-react";
- import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
+  import { useOrdensServico, useCreateOS, useUpdateOS } from "@/hooks/useOrdensServico";
+  import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
  import { ModalRecebimento } from "@/components/ModalRecebimento";
 import { usePecas } from "@/hooks/usePecas";
 import { useServicosCatalogo } from "@/hooks/useServicosCatalogo";
@@ -73,11 +74,38 @@ const emptyForm = {
 };
 
 export default function OrdensServico() {
-  const { data: ordens, isLoading } = useOrdensServico();
-  const { data: clientes, refetch: refetchClientes } = useClientes();
-  const createOS = useCreateOS();
-  const updateOS = useUpdateOS();
-  const deleteOS = useDeleteOS();
+   const queryClient = useQueryClient();
+   const { data: ordens, isLoading } = useOrdensServico();
+   const { data: clientes, refetch: refetchClientes } = useClientes();
+   const createOS = useCreateOS();
+   const updateOS = useUpdateOS();
+ 
+   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string; numero: string }>({ open: false, id: "", numero: "" });
+   const [isDeleting, setIsDeleting] = useState(false);
+ 
+   const handleDelete = async (id: string, numero: string) => {
+     try {
+       setIsDeleting(true);
+       const { error } = await supabase.functions.invoke('delete-ordem-servico', {
+         body: { osId: id }
+       });
+       
+       if (error) throw error;
+ 
+       toast.success(`OS ${numero} excluída com sucesso`);
+       queryClient.invalidateQueries({ queryKey: ['ordens_servico'] });
+       queryClient.invalidateQueries({ queryKey: ['contas'] });
+       queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
+       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+       queryClient.invalidateQueries({ queryKey: ['relatorios'] });
+       setDeleteModal({ open: false, id: "", numero: "" });
+     } catch (err: any) {
+       console.error(err);
+       toast.error('Erro ao excluir OS: ' + (err.message || 'Erro desconhecido'));
+     } finally {
+       setIsDeleting(false);
+     }
+   };
   const { data: empresa } = useEmpresaConfig();
   const { role } = useAuth();
   const { data: pecasData } = usePecas();
@@ -424,18 +452,13 @@ export default function OrdensServico() {
                           <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => { setViewing(o); setViewDialog(true); }}><Eye className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir a OS {o.numero}?</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteOS.mutate(o.id)} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={() => setDeleteModal({ open: true, id: o.id, numero: o.numero })}
+                           >
+                             <Trash2 className="w-4 h-4 text-destructive" />
+                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -495,7 +518,16 @@ export default function OrdensServico() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
+       </Dialog>
+ 
+       <DeleteConfirmationModal
+         isOpen={deleteModal.open}
+         onClose={() => setDeleteModal({ ...deleteModal, open: false })}
+         onConfirm={() => handleDelete(deleteModal.id, deleteModal.numero)}
+         title={`⚠️ Excluir OS ${deleteModal.numero}?`}
+         description="Essa ação é irreversível. Todos os dados vinculados serão excluídos permanentemente: pagamentos, movimentos de caixa, peças utilizadas e registros financeiros."
+         isLoading={isDeleting}
+       />
     </div>
   );
 }
