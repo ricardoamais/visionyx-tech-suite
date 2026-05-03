@@ -1,4 +1,7 @@
- import { useState, useMemo } from "react";
+   import { useState, useMemo } from "react";
+   import { useQuery } from "@tanstack/react-query";
+   import { supabase } from "@/integrations/supabase/client";
+   import { useEmpresa } from "@/contexts/EmpresaContext";
  import { PageHeader } from "@/components/PageHeader";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -13,7 +16,7 @@
    isWithinInterval, format, parseISO, subMonths 
  } from "date-fns";
  import { ptBR } from "date-fns/locale";
-  import { CalendarIcon, Printer, FileDown, CheckCircle2, XCircle, Clock, ClipboardList, Building, TrendingUp } from "lucide-react";
+   import { CalendarIcon, Printer, FileDown, CheckCircle2, XCircle, Clock, ClipboardList, Building, TrendingUp, DollarSign } from "lucide-react";
  import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
  import { Calendar } from "@/components/ui/calendar";
  import { cn } from "@/lib/utils";
