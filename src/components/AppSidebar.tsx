@@ -1,8 +1,9 @@
-import { 
-  LayoutDashboard, Users, Monitor, ClipboardList, FileText, 
+ import {
+   LayoutDashboard, Users, Monitor, ClipboardList, FileText,
    DollarSign, Package, BarChart3, Settings, LogOut, Wrench,
-   ShieldCheck, ShoppingCart, Building2, ShieldAlert, Sun, Moon
-} from "lucide-react";
+   ShieldCheck, ShoppingCart, Building2, ShieldAlert, Sun, Moon,
+   Building
+ } from "lucide-react";
  import { useTheme } from "next-themes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -21,8 +22,9 @@ const mainItems = [
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Equipamentos", url: "/equipamentos", icon: Monitor },
   { title: "Ordens de Serviço", url: "/ordens", icon: ClipboardList },
-  { title: "Orçamentos", url: "/orcamentos", icon: FileText },
-];
+   { title: "Orçamentos", url: "/orcamentos", icon: FileText },
+   { title: "Contratos", url: "/contratos", icon: Building },
+ ];
 
 const managementItems = [
   { title: "Caixa / PDV", url: "/caixa", icon: ShoppingCart },

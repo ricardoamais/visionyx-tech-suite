@@ -15,9 +15,10 @@ import OrdensServico from "./pages/OrdensServico";
 import Orcamentos from "./pages/Orcamentos";
 import Financeiro from "./pages/Financeiro";
 import Estoque from "./pages/Estoque";
-import Relatorios from "./pages/Relatorios";
-import Configuracoes from "./pages/Configuracoes";
-import EquipeUsuarios from "./pages/EquipeUsuarios";
+ import Relatorios from "./pages/Relatorios";
+ import Configuracoes from "./pages/Configuracoes";
+ import EquipeUsuarios from "./pages/EquipeUsuarios";
+ import Contratos from "./pages/Contratos";
 import Admin from "./pages/Admin";
 import Caixa from "./pages/Caixa";
 import Login from "./pages/Login";
@@ -82,8 +83,9 @@ const App = () => (
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/equipamentos" element={<Equipamentos />} />
                 <Route path="/ordens" element={<OrdensServico />} />
-                <Route path="/orcamentos" element={<Orcamentos />} />
-                <Route path="/financeiro" element={<AdminRoute><Financeiro /></AdminRoute>} />
+                 <Route path="/orcamentos" element={<Orcamentos />} />
+                 <Route path="/contratos" element={<Contratos />} />
+                 <Route path="/financeiro" element={<AdminRoute><Financeiro /></AdminRoute>} />
                 <Route path="/estoque" element={<Estoque />} />
                 <Route path="/relatorios" element={<Relatorios />} />
                  <Route path="/configuracoes" element={<Configuracoes />} />
