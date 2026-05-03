@@ -178,19 +178,38 @@ export default function Caixa() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Hora</TableHead>
-                      <TableHead>Itens</TableHead>
+                       <TableHead>Hora / Origem</TableHead>
+                       <TableHead>Descrição / Itens</TableHead>
                       <TableHead>Pagamento</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                       <TableHead className="w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {vendas.map((v: any) => (
+                     {vendas.map((v: any) => {
+                       const isOS = v.origem === 'os';
+                       const isOrc = v.origem === 'orcamento' || v.origem === 'orc';
+                       return (
                       <TableRow key={v.id}>
-                        <TableCell>{format(new Date(v.created_at), "HH:mm")}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {(v.venda_itens ?? []).map((i: any) => `${i.quantidade}x ${i.pecas?.nome ?? "-"}`).join(", ")}
+                         <TableCell>
+                           <div className="flex flex-col">
+                             <span>{format(new Date(v.created_at), "HH:mm")}</span>
+                             {(isOS || isOrc) && (
+                               <span className={`text-[10px] font-bold px-1 rounded w-fit ${isOS ? 'bg-primary/20 text-primary' : 'bg-success/20 text-success'}`}>
+                                 {isOS ? 'OS' : 'ORC'}
+                               </span>
+                             )}
+                           </div>
+                         </TableCell>
+                         <TableCell className="text-xs text-muted-foreground">
+                           {v.observacoes && (isOS || isOrc) ? (
+                             <div className="font-medium text-foreground mb-1">{v.observacoes}</div>
+                           ) : null}
+                           {(v.venda_itens ?? []).length > 0 ? (
+                             (v.venda_itens ?? []).map((i: any) => `${i.quantidade}x ${i.pecas?.nome ?? "-"}`).join(", ")
+                           ) : (
+                             (isOS || isOrc) ? "Pagamento vinculado" : "Sem itens"
+                           )}
                         </TableCell>
                         <TableCell>{pagamentoLabels[v.forma_pagamento]}</TableCell>
                         <TableCell className="text-right font-medium">R$ {Number(v.valor_total).toFixed(2)}</TableCell>
@@ -208,7 +227,8 @@ export default function Caixa() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                       );
+                     })}
                   </TableBody>
                 </Table>
               )}
