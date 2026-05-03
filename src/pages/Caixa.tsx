@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
  import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer, Search, FileText, Wrench, CheckCircle2 } from "lucide-react";
-  import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda, useVendasCaixa, useRegistrarRecebimentoAvulso } from "@/hooks/useCaixa";
+   import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda, useVendasCaixa } from "@/hooks/useCaixa";
  import { useOrcamentos } from "@/hooks/useOrcamentos";
  import { useOrdensServico } from "@/hooks/useOrdensServico";
  import { printRecibo } from "@/components/caixa/PrintRecibo";
@@ -107,21 +107,20 @@ export default function Caixa() {
        });
        if (errorMov) throw errorMov;
  
-       // 2. Atualizar conta para recebido
-       const { error: errorConta } = await supabase.from('contas')
+       // 2. Atualizar conta para recebido (if exists)
+       await supabase.from('contas')
          .update({
-           status: 'recebido',
+           status: 'recebido' as any,
            forma_pagamento: forma_pagamento,
            data_pagamento: new Date().toISOString().split('T')[0],
-         })
+         } as any)
          .eq(tipo === 'orcamento' ? 'orcamento_id' : 'ordem_servico_id', id);
-       // errorConta is fine if it doesn't exist yet, but should exist for approved orc/finalized os
  
        // 3. Atualizar status do documento original
        if (tipo === 'os') {
-         await supabase.from('ordens_servico').update({ status: 'entregue' }).eq('id', id);
+         await supabase.from('ordens_servico').update({ status: 'entregue' } as any).eq('id', id);
        } else {
-         await supabase.from('orcamentos').update({ status: 'pago' }).eq('id', id);
+         await supabase.from('orcamentos').update({ status: 'aprovado' } as any).eq('id', id);
        }
  
        // 4. Imprimir recibo
@@ -561,9 +560,9 @@ export default function Caixa() {
                    </div>
                  </div>
                </div>
-             )}
-                      <div className="col-span-3"><Input type="number" step="0.01" value={it.valor_unitario} onChange={(e) => updateItem(i, { valor_unitario: parseFloat(e.target.value) || 0 })} /></div>
-             <div><Label>Observações</Label><Textarea value={obsVenda} onChange={(e) => setObsVenda(e.target.value)} /></div>
+              )}
+ 
+              <div><Label>Observações</Label><Textarea value={obsVenda} onChange={(e) => setObsVenda(e.target.value)} /></div>
  
              <div className="flex justify-between items-center text-lg font-semibold p-3 rounded-md bg-muted/40">
                <span>Total:</span><span>R$ {(itemSelecionado ? itemSelecionado.valor : totalVenda).toFixed(2)}</span>
