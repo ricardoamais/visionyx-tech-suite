@@ -124,14 +124,15 @@
            }
        }
  
-        // 5. Invalidar caches
-        queryClient.invalidateQueries({ queryKey: ['ordens_servico'] });
-        queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
-        queryClient.invalidateQueries({ queryKey: ['contas'] });
-        queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
-        queryClient.invalidateQueries({ queryKey: ['movimentos_caixa'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-        queryClient.invalidateQueries({ queryKey: ['pecas'] });
+         // 5. Invalidar caches
+         queryClient.invalidateQueries({ queryKey: ['ordens_servico'] });
+         queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
+         queryClient.invalidateQueries({ queryKey: ['contas'] });
+         queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
+         queryClient.invalidateQueries({ queryKey: ['movimentos_caixa'] });
+         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+         queryClient.invalidateQueries({ queryKey: ['relatorios'] });
+         queryClient.invalidateQueries({ queryKey: ['pecas'] });
  
        toast.success(isReceberDepois ? "OS finalizada e conta a receber gerada!" : "Pagamento recebido com sucesso!");
        onSuccess();
