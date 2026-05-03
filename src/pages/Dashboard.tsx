@@ -23,17 +23,19 @@ export default function Dashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["dashboard-stats", companyId],
     enabled: !!companyId,
-    staleTime: 30000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const now = new Date();
-      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const fimMes = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(now.getMonth() - 5);
       sixMonthsAgo.setDate(1);
       sixMonthsAgo.setHours(0, 0, 0, 0);
 
-       const [osRes, orcRes, contasRes, contratosRes] = await Promise.all([
+      const [osRes, orcRes, movimentosRes, contasRes, contratoPagRes] = await Promise.all([
         supabase
           .from("ordens_servico")
           .select("id, status, numero, created_at, clientes(nome)")
@@ -43,70 +45,78 @@ export default function Dashboard() {
           .from("orcamentos")
           .select("id, status")
           .eq("company_id", companyId),
-         supabase
-           .from("contas")
-           .select("id, tipo, valor, status, vencimento, created_at, categoria, ordem_servico_id")
-           .eq("company_id", companyId)
-           .gte("created_at", sixMonthsAgo.toISOString()),
-         supabase
-           .from("contratos")
-           .select("id, valor_mensal, status")
-           .eq("company_id", companyId)
-           .eq("status", "Ativo"),
+        supabase
+          .from("caixa_movimentos")
+          .select("valor, created_at, tipo, origem")
+          .eq("company_id", companyId)
+          .gte("created_at", sixMonthsAgo.toISOString()),
+        supabase
+          .from("contas")
+          .select("valor, tipo, status")
+          .eq("company_id", companyId)
+          .eq("status", "pendente"),
+        supabase
+          .from("contrato_pagamentos")
+          .select("valor, data_pagamento")
+          .eq("company_id", companyId)
+          .eq("status", "pago")
+          .gte("data_pagamento", inicioMes.split('T')[0])
+          .lte("data_pagamento", fimMes.split('T')[0]),
       ]);
+
       const os = osRes.data || [];
       const orc = orcRes.data || [];
-       const contas = contasRes.data || [];
-       const contratos = contratosRes.data || [];
- 
-       const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-       const chartDataMap: Record<string, { mes: string; receitaOS: number; receitaContratos: number; despesa: number; sortKey: number }> = {};
+      const movimentos = movimentosRes.data || [];
+      const contas = contasRes.data || [];
+      const contratoPagamentos = contratoPagRes.data || [];
+
+      const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const chartDataMap: Record<string, { mes: string; receitaOS: number; receitaContratos: number; despesa: number; sortKey: number }> = {};
       
       for (let i = 0; i < 6; i++) {
         const d = new Date();
         d.setMonth(now.getMonth() - i);
         const monthLabel = months[d.getMonth()];
         const key = `${d.getFullYear()}-${d.getMonth()}`;
-         chartDataMap[key] = { mes: monthLabel, receitaOS: 0, receitaContratos: 0, despesa: 0, sortKey: d.getTime() };
+        chartDataMap[key] = { mes: monthLabel, receitaOS: 0, receitaContratos: 0, despesa: 0, sortKey: d.getTime() };
       }
 
-      contas.forEach(c => {
-        const d = new Date(c.created_at);
+      movimentos.forEach(m => {
+        const d = new Date(m.created_at);
         const key = `${d.getFullYear()}-${d.getMonth()}`;
         if (chartDataMap[key]) {
-           if (c.tipo === "receber" && c.status === "recebido") {
-             if (c.categoria === "Contratos") {
-               chartDataMap[key].receitaContratos += Number(c.valor);
-             } else {
-               chartDataMap[key].receitaOS += Number(c.valor);
-             }
-           } else if (c.tipo === "pagar" && c.status === "pago") {
-            chartDataMap[key].despesa += Number(c.valor);
+          if (m.tipo === "entrada") {
+            if (m.origem === "contrato") {
+              chartDataMap[key].receitaContratos += Number(m.valor);
+            } else {
+              chartDataMap[key].receitaOS += Number(m.valor);
+            }
+          } else if (m.tipo === "saida") {
+            chartDataMap[key].despesa += Number(m.valor);
           }
         }
       });
 
-       const chartData = Object.values(chartDataMap)
-         .sort((a, b) => a.sortKey - b.sortKey)
-         .map(({ mes, receitaOS, receitaContratos, despesa }) => ({ mes, receitaOS, receitaContratos, despesa }));
- 
-       const faturamentoMes = contas
-         .filter(c => c.created_at >= firstDayOfMonth && c.tipo === "receber" && c.status === "recebido")
-         .reduce((s, c) => s + Number(c.valor), 0);
- 
-       const receitaContratosMes = contas
-         .filter(c => c.created_at >= firstDayOfMonth && c.tipo === "receber" && c.status === "recebido" && c.categoria === "Contratos")
-        .reduce((s, c) => s + Number(c.valor), 0);
+      const chartData = Object.values(chartDataMap)
+        .sort((a, b) => a.sortKey - b.sortKey)
+        .map(({ mes, receitaOS, receitaContratos, despesa }) => ({ mes, receitaOS, receitaContratos, despesa }));
+
+      const faturamentoMes = movimentos
+        .filter(m => m.created_at >= inicioMes && m.tipo === "entrada")
+        .reduce((s, m) => s + Number(m.valor), 0);
+
+      const receitaContratosMes = contratoPagamentos
+        .reduce((s, p) => s + Number(p.valor), 0);
 
       return {
         osAbertas: os.filter(o => o.status === "aberto").length,
         osAndamento: os.filter(o => ["em_analise", "em_manutencao", "aguardando_aprovacao"].includes(o.status)).length,
         osFinalizadas: os.filter(o => o.status === "finalizado" || o.status === "entregue").length,
-         orcPendentes: orc.filter(o => o.status === "pendente").length,
-         faturamentoMes,
-         receitaContratosMes,
-         aReceber: contas.filter(c => c.tipo === "receber" && (c.status === "pendente" || c.status === "vencido")).reduce((s, c) => s + Number(c.valor), 0),
-        aPagar: contas.filter(c => c.tipo === "pagar" && (c.status === "pendente" || c.status === "vencido")).reduce((s, c) => s + Number(c.valor), 0),
+        orcPendentes: orc.filter(o => o.status === "pendente").length,
+        faturamentoMes,
+        receitaContratosMes,
+        aReceber: contas.filter(c => c.tipo === "receber").reduce((s, c) => s + Number(c.valor), 0),
+        aPagar: contas.filter(c => c.tipo === "pagar").reduce((s, c) => s + Number(c.valor), 0),
         recentOS: os.slice(0, 10),
         chartData,
       };

@@ -1,4 +1,7 @@
- import { useState, useMemo } from "react";
+   import { useState, useMemo } from "react";
+   import { useQuery } from "@tanstack/react-query";
+   import { supabase } from "@/integrations/supabase/client";
+   import { useEmpresa } from "@/contexts/EmpresaContext";
  import { PageHeader } from "@/components/PageHeader";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -13,7 +16,7 @@
    isWithinInterval, format, parseISO, subMonths 
  } from "date-fns";
  import { ptBR } from "date-fns/locale";
-  import { CalendarIcon, Printer, FileDown, CheckCircle2, XCircle, Clock, ClipboardList, Building, TrendingUp } from "lucide-react";
+   import { CalendarIcon, Printer, FileDown, CheckCircle2, XCircle, Clock, ClipboardList, Building, TrendingUp, DollarSign } from "lucide-react";
  import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
  import { Calendar } from "@/components/ui/calendar";
  import { cn } from "@/lib/utils";
@@ -28,10 +31,26 @@ export default function Relatorios() {
    });
    const [activeFilter, setActiveFilter] = useState<string>("30d");
  
-    const { data: ordensServico = [] } = useOrdensServico();
-    const { data: orcamentos = [] } = useOrcamentos();
-    const { data: contas = [] } = useContas();
-    const { data: contratos = [] } = useMaintenanceContracts();
+   const { companyId } = useEmpresa();
+   const { data: ordensServico = [] } = useOrdensServico();
+   const { data: orcamentos = [] } = useOrcamentos();
+   const { data: contratos = [] } = useMaintenanceContracts();
+   
+   const { data: movimentos = [], isLoading: loadingMov } = useQuery({
+     queryKey: ["relatorios-movimentos", companyId, dateRange],
+     enabled: !!companyId && !!dateRange?.from && !!dateRange?.to,
+     queryFn: async () => {
+       const { data, error } = await supabase
+         .from("caixa_movimentos")
+         .select("*")
+         .eq("company_id", companyId)
+         .gte("created_at", startOfDay(dateRange!.from!).toISOString())
+         .lte("created_at", endOfDay(dateRange!.to!).toISOString())
+         .order("created_at", { ascending: false });
+       if (error) throw error;
+       return data;
+     }
+   });
  
    const handleFilterChange = (filter: string) => {
      setActiveFilter(filter);
@@ -57,43 +76,45 @@ export default function Relatorios() {
    };
  
    const filteredData = useMemo(() => {
-     if (!dateRange?.from || !dateRange?.to) return {
-       os: [], orcamentos: [], contas: [], summary: {
-         osAbertas: 0, osFinalizadas: 0, faturamento: 0, ticketMedio: 0, orcAprovados: 0, orcRecusados: 0
-       }
-     };
+     if (!dateRange?.from || !dateRange?.to) return null;
  
-      const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
-  
-      const os = ordensServico.filter(o => isWithinInterval(parseISO(o.created_at), interval));
-      const orcs = orcamentos.filter(o => isWithinInterval(parseISO(o.created_at), interval));
-      const receipts = contas.filter(c => 
-        c.tipo === "receber" && 
-        c.status === "recebido" && 
-        c.vencimento && 
-        isWithinInterval(parseISO(c.vencimento), interval)
-      );
-  
-      const contractReceipts = receipts.filter(c => c.categoria === "Contratos");
-      const osReceipts = receipts.filter(c => c.categoria !== "Contratos");
-  
-      const osAbertas = os.filter(o => ["aberto", "em_analise", "aguardando_aprovacao", "em_manutencao"].includes(o.status)).length;
-      const osFinalizadas = os.filter(o => ["finalizado", "entregue"].includes(o.status)).length;
-      const faturamento = receipts.reduce((acc, curr) => acc + Number(curr.valor), 0);
-      const receitaContratos = contractReceipts.reduce((acc, curr) => acc + Number(curr.valor), 0);
-      const ticketMedio = osFinalizadas > 0 ? osReceipts.reduce((acc, curr) => acc + Number(curr.valor), 0) / osFinalizadas : 0;
-      const ticketMedioContrato = contratos.length > 0 ? receitaContratos / contratos.length : 0;
-      const orcAprovados = orcs.filter(o => o.status === "aprovado").length;
-      const orcRecusados = orcs.filter(o => o.status === "reprovado").length;
+     const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
  
-     // Charts data
-     const faturamentoPorDia = receipts.reduce((acc: any[], curr) => {
-       const day = format(parseISO(curr.vencimento!), "dd/MM");
+     const os = ordensServico.filter(o => isWithinInterval(parseISO(o.created_at), interval));
+     const orcs = orcamentos.filter(o => isWithinInterval(parseISO(o.created_at), interval));
+     
+     const entradas = movimentos.filter(m => m.tipo === 'entrada');
+     const saidas = movimentos.filter(m => m.tipo === 'saida');
+     
+     const faturamento = entradas.reduce((s, m) => s + Number(m.valor), 0);
+     const totalSaidas = saidas.reduce((s, m) => s + Number(m.valor), 0);
+     const lucro = faturamento - totalSaidas;
+ 
+     const receitaOS = entradas.filter(m => m.origem === 'os').reduce((s, m) => s + Number(m.valor), 0);
+     const receitaORC = entradas.filter(m => m.origem === 'orcamento' || m.origem === 'orc').reduce((s, m) => s + Number(m.valor), 0);
+     const receitaPDV = entradas.filter(m => m.origem === 'pdv').reduce((s, m) => s + Number(m.valor), 0);
+     const receitaContratos = entradas.filter(m => m.origem === 'contrato').reduce((s, m) => s + Number(m.valor), 0);
+ 
+     const osFinalizadasPeriodo = os.filter(o => ["finalizado", "entregue"].includes(o.status)).length;
+     const ticketMedioOS = osFinalizadasPeriodo > 0 ? receitaOS / osFinalizadasPeriodo : 0;
+ 
+     const orcAprovados = orcs.filter(o => o.status === "aprovado").length;
+     const orcRecusados = orcs.filter(o => o.status === "reprovado").length;
+ 
+     const faturamentoPorDia = entradas.reduce((acc: any[], curr) => {
+       const day = format(parseISO(curr.created_at), "dd/MM");
        const existing = acc.find(a => a.dia === day);
        if (existing) existing.valor += Number(curr.valor);
        else acc.push({ dia: day, valor: Number(curr.valor) });
        return acc;
      }, []).sort((a, b) => a.dia.localeCompare(b.dia));
+ 
+     const porFormaPagamento = entradas.reduce((acc: any[], curr) => {
+       const existing = acc.find(a => a.name === curr.forma_pagamento);
+       if (existing) existing.value += Number(curr.valor);
+       else acc.push({ name: curr.forma_pagamento, value: Number(curr.valor) });
+       return acc;
+     }, []);
  
      const statusOSData = [
        { name: "Aberto", value: os.filter(o => o.status === "aberto").length },
@@ -135,15 +156,20 @@ export default function Relatorios() {
         .slice(0, 5)
         .map(c => ({ nome: c.empresa_nome, valor: Number(c.valor_mensal) }));
   
-      return {
-        summary: { osAbertas, osFinalizadas, faturamento, receitaContratos, ticketMedio, ticketMedioContrato, orcAprovados, orcRecusados },
-        faturamentoPorDia,
-        statusOSData,
-        servicosMaisRealizados,
-        topClientes,
-        topContratos
-      };
-    }, [dateRange, ordensServico, orcamentos, contas, contratos]);
+     return {
+       summary: { 
+         faturamento, totalSaidas, lucro, receitaOS, receitaORC, receitaPDV, receitaContratos, 
+         ticketMedioOS, orcAprovados, orcRecusados, osFinalizadasPeriodo 
+       },
+       faturamentoPorDia,
+       porFormaPagamento,
+       statusOSData,
+       servicosMaisRealizados,
+       topClientes,
+       topContratos,
+       movimentos
+     };
+   }, [dateRange, ordensServico, orcamentos, movimentos, contratos]);
  
    const formatCurrency = (val: number) => 
      new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
@@ -245,16 +271,18 @@ export default function Relatorios() {
          </Popover>
        </div>
  
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Faturamento Total" value={formatCurrency(filteredData.summary.faturamento)} icon={FileDown} />
-          <StatCard title="Receita Contratos" value={formatCurrency(filteredData.summary.receitaContratos)} icon={Building} />
-          <StatCard title="Ticket Médio OS" value={formatCurrency(filteredData.summary.ticketMedio)} icon={CalendarIcon} />
-          <StatCard title="Ticket Médio Contrato" value={formatCurrency(filteredData.summary.ticketMedioContrato)} icon={TrendingUp} />
-          <StatCard title="OS Abertas" value={filteredData.summary.osAbertas} icon={Clock} />
-          <StatCard title="OS Finalizadas" value={filteredData.summary.osFinalizadas} icon={CheckCircle2} />
-          <StatCard title="Orçamentos Aprovados" value={filteredData.summary.orcAprovados} icon={ClipboardList} />
-          <StatCard title="Orçamentos Recusados" value={filteredData.summary.orcRecusados} icon={XCircle} />
-        </div>
+        {filteredData && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard title="Faturamento Total" value={formatCurrency(filteredData.summary.faturamento)} icon={FileDown} gradientClass="grad-blue" />
+            <StatCard title="Receita OS" value={formatCurrency(filteredData.summary.receitaOS)} icon={ClipboardList} gradientClass="grad-orange" />
+            <StatCard title="Receita PDV" value={formatCurrency(filteredData.summary.receitaPDV)} icon={TrendingUp} gradientClass="grad-green" />
+            <StatCard title="Receita Contratos" value={formatCurrency(filteredData.summary.receitaContratos)} icon={Building} gradientClass="grad-purple" />
+            <StatCard title="Saídas Total" value={formatCurrency(filteredData.summary.totalSaidas)} icon={TrendingUp} />
+            <StatCard title="Lucro Líquido" value={formatCurrency(filteredData.summary.lucro)} icon={DollarSign} gradientClass={filteredData.summary.lucro >= 0 ? "grad-green" : "grad-orange"} />
+            <StatCard title="Ticket Médio OS" value={formatCurrency(filteredData.summary.ticketMedioOS)} icon={CalendarIcon} />
+            <StatCard title="OS Finalizadas" value={filteredData.summary.osFinalizadasPeriodo} icon={CheckCircle2} />
+          </div>
+        )}
  
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <Card className="glass-card">
@@ -277,15 +305,15 @@ export default function Relatorios() {
          </Card>
  
          <Card className="glass-card">
-           <CardHeader><CardTitle className="text-base">Status das OS</CardTitle></CardHeader>
+           <CardHeader><CardTitle className="text-base">Distribuição por Pagamento</CardTitle></CardHeader>
            <CardContent>
-             {filteredData.statusOSData.length > 0 ? (
+             {filteredData && filteredData.porFormaPagamento.length > 0 ? (
                <ResponsiveContainer width="100%" height={260}>
                  <PieChart>
-                   <Pie data={filteredData.statusOSData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
-                     {filteredData.statusOSData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                   <Pie data={filteredData.porFormaPagamento} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
+                     {filteredData.porFormaPagamento.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                    </Pie>
-                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
+                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} formatter={(v: number) => formatCurrency(v)} />
                  </PieChart>
                </ResponsiveContainer>
              ) : (
@@ -350,7 +378,66 @@ export default function Relatorios() {
               )}
             </CardContent>
           </Card>
-        </div>
+        {filteredData && (
+           <Card className="glass-card lg:col-span-2 no-print">
+             <CardHeader>
+               <CardTitle className="text-base">Detalhamento de Movimentações</CardTitle>
+             </CardHeader>
+             <CardContent>
+               <div className="overflow-x-auto">
+                 <table className="enterprise-table">
+                   <thead>
+                     <tr>
+                       <th>Data</th>
+                       <th>Descrição</th>
+                       <th>Origem</th>
+                       <th>Pagamento</th>
+                       <th className="text-right">Valor</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {filteredData.movimentos.map((m: any) => (
+                       <tr key={m.id}>
+                         <td className="text-xs">{format(parseISO(m.created_at), "dd/MM/yyyy HH:mm")}</td>
+                         <td className="text-[13px] font-medium">{m.descricao}</td>
+                         <td>
+                           <span className={cn(
+                             "text-[10px] font-bold px-1.5 py-0.5 rounded uppercase",
+                             m.origem === 'os' ? "bg-blue-100 text-blue-700" :
+                             m.origem === 'pdv' ? "bg-green-100 text-green-700" :
+                             m.origem === 'contrato' ? "bg-purple-100 text-purple-700" :
+                             "bg-orange-100 text-orange-700"
+                           )}>
+                             {m.origem || 'PDV'}
+                           </span>
+                         </td>
+                         <td className="text-xs opacity-70 uppercase font-bold">{m.forma_pagamento}</td>
+                         <td className={cn(
+                           "text-right font-bold text-sm",
+                           m.tipo === 'entrada' ? "text-green-600" : "text-destructive"
+                         )}>
+                           {m.tipo === 'entrada' ? '+' : '-'} {formatCurrency(Number(m.valor))}
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                   <tfoot>
+                     <tr className="bg-muted/30">
+                       <td colSpan={4} className="text-right font-bold py-3 uppercase tracking-wider text-[10px]">Total Período:</td>
+                       <td className={cn(
+                         "text-right font-black text-base py-3",
+                         filteredData.summary.lucro >= 0 ? "text-green-600" : "text-destructive"
+                       )}>
+                         {formatCurrency(filteredData.summary.lucro)}
+                       </td>
+                     </tr>
+                   </tfoot>
+                 </table>
+               </div>
+             </CardContent>
+           </Card>
+         )}
+       </div>
  
        <div className="print-only mt-20 text-center text-xs text-muted-foreground border-t pt-4">
          Relatório gerado em {format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })} - Visionyx
