@@ -3,7 +3,7 @@ import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -115,71 +115,101 @@ export default function Dashboard() {
 
   if (isLoading || !stats) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">Visão geral do sistema</p>
-      </div>
+   return (
+     <div className="space-y-10 pb-10">
+       <div>
+         <h1 className="text-3xl font-black tracking-tight">Dashboard Overview</h1>
+         <p className="text-muted-foreground text-sm mt-1 font-medium">Bem-vindo ao centro de comando da sua empresa.</p>
+       </div>
+ 
+       <div className="space-y-4">
+         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-50 px-1">Operacional</h2>
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+           <StatCard title="OS Abertas" value={stats.osAbertas} icon={ClipboardList} gradientClass="grad-blue" trend="8%" />
+           <StatCard title="Em Andamento" value={stats.osAndamento} icon={Clock} gradientClass="grad-orange" trend="12%" />
+           <StatCard title="Finalizadas" value={stats.osFinalizadas} icon={CheckCircle} gradientClass="grad-green" trend="24%" />
+           <StatCard title="Orçamentos Pendentes" value={stats.orcPendentes} icon={FileText} gradientClass="grad-purple" trend="5%" trendUp={false} />
+         </div>
+       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="OS Abertas" value={stats.osAbertas} icon={ClipboardList} />
-        <StatCard title="Em Andamento" value={stats.osAndamento} icon={Clock} />
-        <StatCard title="Finalizadas" value={stats.osFinalizadas} icon={CheckCircle} />
-        <StatCard title="Orçamentos Pendentes" value={stats.orcPendentes} icon={FileText} />
-      </div>
-
-       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-         <StatCard title="Faturamento" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.faturamentoMes)} icon={DollarSign} />
-         <StatCard title="Receita Contratos" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.receitaContratosMes)} icon={Building} />
-         <StatCard title="A Receber" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.aReceber)} icon={TrendingUp} />
-         <StatCard title="A Pagar" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.aPagar)} icon={TrendingDown} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="glass-card">
-          <CardHeader><CardTitle className="text-base">Financeiro Mensal</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={stats.chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
-                 <Bar dataKey="receitaOS" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="OS / Serviços" />
-                 <Bar dataKey="receitaContratos" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} name="Contratos" />
-                 <Bar dataKey="despesa" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Despesas" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader><CardTitle className="text-base">Últimas Ordens de Serviço</CardTitle></CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>OS</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stats.recentOS.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">Nenhuma OS registrada</TableCell></TableRow>
-                ) : stats.recentOS.map((order: any) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium text-primary">{order.numero}</TableCell>
-                    <TableCell>{(order.clientes as any)?.nome || "—"}</TableCell>
-                    <TableCell><StatusBadge status={statusMap[order.status] || order.status} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+       <div className="space-y-4">
+         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground opacity-50 px-1">Financeiro</h2>
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+           <StatCard title="Faturamento" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.faturamentoMes)} icon={DollarSign} gradientClass="grad-blue" trend="15%" />
+           <StatCard title="Receita Contratos" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.receitaContratosMes)} icon={Building} gradientClass="grad-green" trend="2%" />
+           <StatCard title="A Receber" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.aReceber)} icon={TrendingUp} gradientClass="grad-orange" />
+           <StatCard title="A Pagar" value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.aPagar)} icon={TrendingDown} gradientClass="grad-purple" />
+         </div>
+       </div>
+ 
+       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         <Card className="lg:col-span-2 shadow-xl shadow-primary/5 border-border/40 overflow-hidden">
+           <CardHeader className="border-b border-border/40 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Evolução Financeira</CardTitle>
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase">
+                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-primary" /> Serviços</div>
+                  <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500" /> Contratos</div>
+                </div>
+              </div>
+           </CardHeader>
+           <CardContent className="pt-8">
+             <ResponsiveContainer width="100%" height={320}>
+               <AreaChart data={stats.chartData}>
+                 <defs>
+                   <linearGradient id="colorOS" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                     <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                   </linearGradient>
+                   <linearGradient id="colorContratos" x1="0" y1="0" x2="0" y2="1">
+                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                   </linearGradient>
+                 </defs>
+                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                 <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 600}} dy={10} />
+                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 600}} />
+                 <Tooltip 
+                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)" }}
+                   itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                 />
+                 <Area type="monotone" dataKey="receitaOS" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorOS)" name="OS / Serviços" />
+                 <Area type="monotone" dataKey="receitaContratos" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorContratos)" name="Contratos" />
+               </AreaChart>
+             </ResponsiveContainer>
+           </CardContent>
+         </Card>
+ 
+         <Card className="shadow-xl shadow-primary/5 border-border/40 overflow-hidden">
+           <CardHeader className="border-b border-border/40 bg-muted/20">
+              <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Últimas Atividades</CardTitle>
+           </CardHeader>
+           <CardContent className="p-0">
+             <div className="overflow-auto max-h-[400px]">
+               <table className="enterprise-table">
+                 <thead>
+                   <tr>
+                     <th>Ref</th>
+                     <th>Cliente</th>
+                     <th>Status</th>
+                   </tr>
+                 </thead>
+                 <tbody>
+                   {stats.recentOS.length === 0 ? (
+                     <tr><td colSpan={3} className="text-center text-muted-foreground py-10 font-medium">Nenhuma atividade recente</td></tr>
+                   ) : stats.recentOS.map((order: any) => (
+                     <tr key={order.id} className="cursor-pointer">
+                       <td className="font-bold text-primary text-xs">{order.numero}</td>
+                       <td className="text-[13px] font-medium truncate max-w-[120px]">{(order.clientes as any)?.nome || "—"}</td>
+                       <td><StatusBadge status={statusMap[order.status] || order.status} /></td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+           </CardContent>
+         </Card>
+       </div>
+     </div>
+   );
 }
