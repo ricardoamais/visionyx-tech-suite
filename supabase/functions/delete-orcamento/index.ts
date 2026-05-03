@@ -20,32 +20,38 @@
  
      const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
      if (userError || !user) throw new Error('Não autorizado')
- 
-     const { data: profile } = await supabaseClient
-       .from('profiles')
-       .select('company_id')
-       .eq('user_id', user.id)
-       .single()
- 
-     if (!profile?.company_id) throw new Error('Empresa não encontrada para o usuário')
- 
-     const { orcId } = await req.json()
-     if (!orcId) throw new Error('ID do Orçamento não informado')
- 
-     // Verificar se o orçamento pertence à mesma empresa
-     const { data: orcamento, error: orcCheckError } = await supabaseClient
-       .from('orcamentos')
-       .select('numero, company_id')
-       .eq('id', orcId)
-       .single()
- 
-     if (orcCheckError || !orcamento) throw new Error('Orçamento não encontrado')
-     if (orcamento.company_id !== profile.company_id) throw new Error('Permissão negada para esta empresa')
- 
+
      const adminClient = createClient(
        Deno.env.get('SUPABASE_URL') ?? '',
        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
      )
+
+     const isSuperAdmin = user.email === 'amaiscontratos@gmail.com'
+
+     const { data: profile } = await adminClient
+       .from('profiles')
+       .select('company_id')
+       .eq('user_id', user.id)
+       .maybeSingle()
+
+     const userCompanyId = profile?.company_id ?? null
+     if (!isSuperAdmin && !userCompanyId) throw new Error('Empresa não encontrada para o usuário')
+
+     const { orcId } = await req.json()
+     if (!orcId) throw new Error('ID do Orçamento não informado')
+
+     const { data: orcamento, error: orcCheckError } = await adminClient
+       .from('orcamentos')
+       .select('numero, company_id')
+       .eq('id', orcId)
+       .maybeSingle()
+
+     if (orcCheckError || !orcamento) throw new Error('Orçamento não encontrado')
+     if (!isSuperAdmin && orcamento.company_id !== userCompanyId) {
+       throw new Error('Permissão negada para esta empresa')
+     }
+
+     const targetCompanyId = orcamento.company_id
  
      // 1. Vendas e Venda Itens vinculados
      const { data: vendas } = await adminClient.from('vendas').select('id').eq('orcamento_id', orcId)
@@ -56,7 +62,7 @@
      }
  
      // 2. Contas (por ID ou por descrição contendo o número do orçamento)
-     await adminClient.from('contas').delete().eq('company_id', profile.company_id).ilike('descricao', `%${orcamento.numero}%`)
+     await adminClient.from('contas').delete().eq('company_id', targetCompanyId).ilike('descricao', `%${orcamento.numero}%`)
  
      // 3. Itens do Orçamento
      await adminClient.from('orcamento_itens').delete().eq('orcamento_id', orcId)
@@ -66,7 +72,6 @@
        .from('orcamentos')
        .delete()
        .eq('id', orcId)
-       .eq('company_id', profile.company_id)
  
      if (deleteError) throw deleteError
  

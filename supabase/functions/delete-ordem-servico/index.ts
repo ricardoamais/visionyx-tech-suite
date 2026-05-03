@@ -20,33 +20,37 @@
  
      const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
      if (userError || !user) throw new Error('Não autorizado')
- 
-     const { data: profile } = await supabaseClient
-       .from('profiles')
-       .select('company_id')
-       .eq('user_id', user.id)
-       .single()
- 
-     if (!profile?.company_id) throw new Error('Empresa não encontrada para o usuário')
- 
-     const { osId } = await req.json()
-     if (!osId) throw new Error('ID da OS não informado')
- 
-     // Verificar se a OS pertence à mesma empresa
-     const { data: os, error: osCheckError } = await supabaseClient
-       .from('ordens_servico')
-       .select('company_id')
-       .eq('id', osId)
-       .single()
- 
-     if (osCheckError || !os) throw new Error('Ordem de serviço não encontrada')
-     if (os.company_id !== profile.company_id) throw new Error('Permissão negada para esta empresa')
- 
-     // Iniciar deleções em cascata usando service_role client para garantir que tudo seja removido
+
      const adminClient = createClient(
        Deno.env.get('SUPABASE_URL') ?? '',
        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
      )
+
+     const isSuperAdmin = user.email === 'amaiscontratos@gmail.com'
+
+     const { data: profile } = await adminClient
+       .from('profiles')
+       .select('company_id')
+       .eq('user_id', user.id)
+       .maybeSingle()
+
+     const userCompanyId = profile?.company_id ?? null
+     if (!isSuperAdmin && !userCompanyId) throw new Error('Empresa não encontrada para o usuário')
+
+     const { osId } = await req.json()
+     if (!osId) throw new Error('ID da OS não informado')
+
+     // Verificar se a OS pertence à mesma empresa (usando admin para evitar RLS)
+     const { data: os, error: osCheckError } = await adminClient
+       .from('ordens_servico')
+       .select('company_id')
+       .eq('id', osId)
+       .maybeSingle()
+
+     if (osCheckError || !os) throw new Error('Ordem de serviço não encontrada')
+     if (!isSuperAdmin && os.company_id !== userCompanyId) {
+       throw new Error('Permissão negada para esta empresa')
+     }
  
      // 1. Vendas e Venda Itens
      const { data: vendas } = await adminClient.from('vendas').select('id').eq('ordem_servico_id', osId)
@@ -71,7 +75,6 @@
        .from('ordens_servico')
        .delete()
        .eq('id', osId)
-       .eq('company_id', profile.company_id)
  
      if (deleteError) throw deleteError
  
