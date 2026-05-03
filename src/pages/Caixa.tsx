@@ -563,19 +563,12 @@ export default function Caixa() {
                </div>
              )}
                       <div className="col-span-3"><Input type="number" step="0.01" value={it.valor_unitario} onChange={(e) => updateItem(i, { valor_unitario: parseFloat(e.target.value) || 0 })} /></div>
-                      <div className="col-span-1"><Button variant="ghost" size="icon" onClick={() => removeItem(i)}><Trash2 className="w-4 h-4 text-destructive" /></Button></div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div><Label>Observações</Label><Textarea value={obsVenda} onChange={(e) => setObsVenda(e.target.value)} /></div>
-
-            <div className="flex justify-between items-center text-lg font-semibold p-3 rounded-md bg-muted/40">
-              <span>Total:</span><span>R$ {totalVenda.toFixed(2)}</span>
-            </div>
-          </div>
+             <div><Label>Observações</Label><Textarea value={obsVenda} onChange={(e) => setObsVenda(e.target.value)} /></div>
+ 
+             <div className="flex justify-between items-center text-lg font-semibold p-3 rounded-md bg-muted/40">
+               <span>Total:</span><span>R$ {(itemSelecionado ? itemSelecionado.valor : totalVenda).toFixed(2)}</span>
+             </div>
+           </div>
            <DialogFooter>
              <Button variant="outline" onClick={() => { setOpenVenda(false); setItemSelecionado(null); }}>Cancelar</Button>
              {itemSelecionado ? (
@@ -584,6 +577,9 @@ export default function Caixa() {
                <Button onClick={handleVenda} disabled={criarVenda.isPending || itens.length === 0}>Registrar Venda</Button>
              )}
            </DialogFooter>
+         </DialogContent>
+       </Dialog>
+ 
        {/* Sucesso Feedback */}
        <Dialog open={openSucesso} onOpenChange={setOpenSucesso}>
          <DialogContent className="sm:max-w-md">
@@ -607,8 +603,6 @@ export default function Caixa() {
            </div>
          </DialogContent>
        </Dialog>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+     </div>
+   );
+ }
