@@ -137,6 +137,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "delete") {
+      const { userId } = params;
+      if (!userId) throw new Error("userId obrigatório");
+
+      // Ensure we are not deleting our own account
+      if (userId === caller.id) throw new Error("Você não pode excluir sua própria conta");
+
+      // Check if user belongs to the same company (unless super admin)
+      if (!isSuperAdmin) {
+        const { data: userRole } = await supabaseAdmin
+          .from("user_roles")
+          .select("company_id")
+          .eq("user_id", userId)
+          .single();
+
+        if (!userRole || userRole.company_id !== callerCompanyId) {
+          throw new Error("Acesso negado: usuário de outra empresa");
+        }
+      }
+
+      // Delete user from auth (profiles and user_roles are handled by cascade or manual delete if needed)
+      // Usually profiles/user_roles have foreign keys to auth.users.
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (deleteError) throw deleteError;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error("Ação inválida");
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), {
