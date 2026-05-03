@@ -63,11 +63,12 @@
  
        // 2. Atualizar ou Inserir em contas
        // Tentar encontrar se já existe uma conta para esta OS/Orcamento
-       const { data: existingConta } = await supabase
-         .from('contas')
-         .select('id')
-         .eq(data.tipo === 'os' ? 'ordem_servico_id' : 'orcamento_id', data.id)
-         .maybeSingle();
+        const colName = data.tipo === 'os' ? 'ordem_servico_id' : 'orcamento_id';
+        const { data: existingConta } = await supabase
+          .from('contas')
+          .select('id')
+          .eq(colName as any, data.id)
+          .maybeSingle();
 
        if (existingConta) {
          const { error: contaErr } = await supabase
