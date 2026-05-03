@@ -44,11 +44,38 @@ const orcamentoSchema = z.object({
 type OrcamentoFormValues = z.infer<typeof orcamentoSchema>;
 
 export default function Orcamentos() {
-  const { data: orcamentos, isLoading } = useOrcamentos();
-  const { data: clientes, refetch: refetchClientes } = useClientes();
-  const createOrc = useCreateOrcamento();
-  const updateOrc = useUpdateOrcamento();
-  const deleteOrc = useDeleteOrcamento();
+   const queryClient = useQueryClient();
+   const { data: orcamentos, isLoading } = useOrcamentos();
+   const { data: clientes, refetch: refetchClientes } = useClientes();
+   const createOrc = useCreateOrcamento();
+   const updateOrc = useUpdateOrcamento();
+ 
+   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string; numero: string }>({ open: false, id: "", numero: "" });
+   const [isDeleting, setIsDeleting] = useState(false);
+ 
+   const handleDelete = async (id: string, numero: string) => {
+     try {
+       setIsDeleting(true);
+       const { error } = await supabase.functions.invoke('delete-orcamento', {
+         body: { orcId: id }
+       });
+       
+       if (error) throw error;
+ 
+       toast.success(`Orçamento ${numero} excluído com sucesso`);
+       queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
+       queryClient.invalidateQueries({ queryKey: ['contas'] });
+       queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
+       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+       queryClient.invalidateQueries({ queryKey: ['relatorios'] });
+       setDeleteModal({ open: false, id: "", numero: "" });
+     } catch (err: any) {
+       console.error(err);
+       toast.error('Erro ao excluir orçamento: ' + (err.message || 'Erro desconhecido'));
+     } finally {
+       setIsDeleting(false);
+     }
+   };
   const createOS = useCreateOS();
   const createConta = useCreateConta();
   const { data: empresa } = useEmpresaConfig();
