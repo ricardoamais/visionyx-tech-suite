@@ -1,5 +1,5 @@
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useState, useCallback, useEffect } from "react";
+ import { useState, useCallback, useEffect } from "react";
+ import { useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,7 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, CheckCircle } from "lucide-react";
- import { useOrdensServico, useCreateOS, useUpdateOS, useDeleteOS } from "@/hooks/useOrdensServico";
+  import { useOrdensServico, useCreateOS, useUpdateOS } from "@/hooks/useOrdensServico";
+  import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
  import { ModalRecebimento } from "@/components/ModalRecebimento";
 import { usePecas } from "@/hooks/usePecas";
 import { useServicosCatalogo } from "@/hooks/useServicosCatalogo";
