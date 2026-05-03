@@ -144,15 +144,17 @@
        if (e2) throw e2;
  
        // 3. Inserir em caixa_movimentos
-       const { error: e3 } = await supabase.from("caixa_movimentos").insert({
-         company_id: companyId,
-         caixa_id: input.caixa_id || null,
-         tipo: "entrada",
-         descricao: `Contrato ${input.empresa_nome} - ${input.mes_referencia}`,
-         valor: input.valor,
-         forma_pagamento: input.forma_pagamento,
-         data_movimento: new Date().toISOString(),
-       });
+        const { error: e3 } = await supabase.from("caixa_movimentos").insert({
+          company_id: companyId,
+          caixa_id: input.caixa_id || null,
+          tipo: "entrada",
+          descricao: `Contrato ${input.empresa_nome} - ${input.mes_referencia}`,
+          valor: input.valor,
+          forma_pagamento: input.forma_pagamento,
+          data_movimento: new Date().toISOString(),
+          origem: 'contrato',
+          origem_id: pgto.id
+        });
        if (e3) throw e3;
  
        return pgto;
