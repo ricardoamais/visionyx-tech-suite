@@ -147,7 +147,7 @@ export default function Dashboard() {
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} />
                  <Bar dataKey="receitaOS" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="OS / Serviços" />
-                 <Bar dataKey="receitaContratos" fill="hsl(217.2 91.2% 59.8%)" radius={[4, 4, 0, 0]} name="Contratos" />
+                 <Bar dataKey="receitaContratos" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} name="Contratos" />
                  <Bar dataKey="despesa" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Despesas" />
               </BarChart>
             </ResponsiveContainer>
