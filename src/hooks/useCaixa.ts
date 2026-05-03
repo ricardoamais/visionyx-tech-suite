@@ -191,12 +191,16 @@ export function useCreateVenda() {
         .eq("venda_id", venda.id);
       return { ...venda, venda_itens: itensFull ?? [] };
     },
-     onSuccess: (_, variables) => {
-       qc.invalidateQueries({ queryKey: ["vendas_caixa"] });
-       qc.invalidateQueries({ queryKey: ["movimentos_caixa"] });
-       qc.invalidateQueries({ queryKey: ["pecas"] });
-       toast.success("Venda registrada!");
-     },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ["vendas_caixa"] });
+        qc.invalidateQueries({ queryKey: ["movimentos_caixa"] });
+        qc.invalidateQueries({ queryKey: ["pecas"] });
+        qc.invalidateQueries({ queryKey: ["dashboard"] });
+        qc.invalidateQueries({ queryKey: ["relatorios"] });
+        qc.invalidateQueries({ queryKey: ["caixa"] });
+        qc.invalidateQueries({ queryKey: ["contas"] });
+        toast.success("Venda registrada!");
+      },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 }
