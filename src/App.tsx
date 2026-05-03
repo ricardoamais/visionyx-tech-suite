@@ -17,7 +17,7 @@ import Financeiro from "./pages/Financeiro";
 import Estoque from "./pages/Estoque";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
-import Gerenciar from "./pages/Gerenciar";
+import EquipeUsuarios from "./pages/EquipeUsuarios";
 import Admin from "./pages/Admin";
 import Caixa from "./pages/Caixa";
 import Login from "./pages/Login";
@@ -87,7 +87,7 @@ const App = () => (
                 <Route path="/estoque" element={<Estoque />} />
                 <Route path="/relatorios" element={<Relatorios />} />
                  <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/gerenciar" element={<AdminRoute><Gerenciar /></AdminRoute>} />
+                <Route path="/equipe" element={<AdminRoute><EquipeUsuarios /></AdminRoute>} />
                 <Route path="/admin" element={<SuperAdminRoute><Admin /></SuperAdminRoute>} />
                 <Route path="/caixa" element={<Caixa />} />
               </Route>
