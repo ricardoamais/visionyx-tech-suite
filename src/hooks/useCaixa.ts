@@ -96,22 +96,38 @@ export function useFecharCaixa() {
   });
 }
 
-export function useVendasCaixa(caixaId: string | null | undefined) {
-  return useQuery({
-    queryKey: ["vendas_caixa", caixaId],
-    enabled: !!caixaId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vendas")
-        .select("*, venda_itens(*, pecas(nome))")
-        .eq("caixa_id", caixaId!)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-}
-
+ export function useMovimentosCaixa(caixaId: string | null | undefined) {
+   return useQuery({
+     queryKey: ["movimentos_caixa", caixaId],
+     enabled: !!caixaId,
+     queryFn: async () => {
+       const { data, error } = await supabase
+         .from("caixa_movimentos")
+         .select("*")
+         .eq("caixa_id", caixaId!)
+         .order("created_at", { ascending: false });
+       if (error) throw error;
+       return data ?? [];
+     },
+   });
+ }
+ 
+ export function useVendasCaixa(caixaId: string | null | undefined) {
+   return useQuery({
+     queryKey: ["vendas_caixa", caixaId],
+     enabled: !!caixaId,
+     queryFn: async () => {
+       const { data, error } = await supabase
+         .from("vendas")
+         .select("*, venda_itens(*, pecas(nome))")
+         .eq("caixa_id", caixaId!)
+         .order("created_at", { ascending: false });
+       if (error) throw error;
+       return data ?? [];
+     },
+   });
+ }
+ 
 export function useCreateVenda() {
   const qc = useQueryClient();
   const { companyId } = useEmpresa();
