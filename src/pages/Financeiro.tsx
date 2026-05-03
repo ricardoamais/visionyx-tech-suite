@@ -161,11 +161,11 @@ export default function Financeiro() {
     <div className="space-y-6">
       <PageHeader title="Financeiro" description="Controle financeiro completo" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Total Recebido" value={`R$ ${totalRecebido.toFixed(2)}`} icon={DollarSign} />
-        <StatCard title="Contas a Receber" value={`R$ ${totalReceber.toFixed(2)}`} icon={TrendingUp} />
-        <StatCard title="Contas a Pagar" value={`R$ ${totalPagar.toFixed(2)}`} icon={TrendingDown} />
-      </div>
+       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+         <StatCard title="Total Recebido" value={`R$ ${totalRecebido.toFixed(2)}`} icon={DollarSign} gradientClass="grad-green" />
+         <StatCard title="Contas a Receber" value={`R$ ${totalReceber.toFixed(2)}`} icon={TrendingUp} gradientClass="grad-blue" />
+         <StatCard title="Contas a Pagar" value={`R$ ${totalPagar.toFixed(2)}`} icon={TrendingDown} gradientClass="grad-orange" />
+       </div>
 
       {cashFlowData.length > 0 && (
         <Card className="glass-card">
