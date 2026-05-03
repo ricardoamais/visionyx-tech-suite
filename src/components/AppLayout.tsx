@@ -1,25 +1,32 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
-import { Outlet, useLocation } from "react-router-dom";
+ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+ import { AppSidebar } from "@/components/AppSidebar";
+ import { Outlet, useLocation, Link } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BillingManager } from "./BillingManager";
 
-import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+ import { Bell, Search, ChevronRight } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
 
-export function AppLayout() {
-  const location = useLocation();
-  const { user, role } = useAuth();
+ const routeLabels: Record<string, string> = {
+   "/": "Dashboard",
+   "/clientes": "Gestão > Clientes",
+   "/equipamentos": "Gestão > Equipamentos",
+   "/ordens": "Operacional > Ordens de Serviço",
+   "/orcamentos": "Operacional > Orçamentos",
+   "/contratos": "Gestão > Contratos",
+   "/caixa": "Financeiro > Caixa / PDV",
+   "/financeiro": "Financeiro > Geral",
+   "/estoque": "Gestão > Estoque",
+   "/relatorios": "Análise > Relatórios",
+   "/configuracoes": "Sistema > Configurações",
+   "/equipe": "Sistema > Equipe",
+   "/admin": "Sistema > Platform Admin",
+ };
 
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("nome").eq("user_id", user!.id).maybeSingle();
-      return data;
-    },
-  });
+ export function AppLayout() {
+   const location = useLocation();
+   const breadcrumb = routeLabels[location.pathname] || "Página";
 
   return (
     <SidebarProvider>
