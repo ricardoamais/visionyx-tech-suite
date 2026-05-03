@@ -28,9 +28,14 @@ export function useCreateEquipamento() {
       cliente_id: string; acessorios?: string; defeito_relatado?: string;
       senha_equipamento?: string; observacoes?: string;
     }) => {
-      if (!companyId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase.from("equipamentos").insert({ ...input, company_id: companyId }).select("*, clientes(nome)").single();
-      if (error) throw error;
+       if (!companyId) throw new Error("Empresa não definida");
+       const sanitized = {
+         ...input,
+         company_id: companyId,
+         cliente_id: input.cliente_id || null,
+       };
+       const { data, error } = await supabase.from("equipamentos").insert(sanitized as any).select("*, clientes(nome)").single();
+       if (error) throw error;
       return data;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["equipamentos"] }); toast.success("Equipamento cadastrado!"); },
@@ -44,10 +49,14 @@ export function useUpdateEquipamento() {
     mutationFn: async ({ id, ...input }: {
       id: string; tipo?: string; marca?: string; modelo?: string; numero_serie?: string;
       cliente_id?: string; acessorios?: string; defeito_relatado?: string;
-      senha_equipamento?: string; observacoes?: string;
-    }) => {
-      const { data, error } = await supabase.from("equipamentos").update(input).eq("id", id).select("*, clientes(nome)").single();
-      if (error) throw error;
+       senha_equipamento?: string; observacoes?: string;
+     }) => {
+       const sanitized = {
+         ...input,
+         cliente_id: input.cliente_id || null,
+       };
+       const { data, error } = await supabase.from("equipamentos").update(sanitized as any).eq("id", id).select("*, clientes(nome)").single();
+       if (error) throw error;
       return data;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["equipamentos"] }); toast.success("Equipamento atualizado!"); },
