@@ -73,58 +73,65 @@ export default function Estoque() {
         </Card>
       )}
 
-      <Card className="glass-card">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar peça..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm" />
-          </div>
-          {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Peça</TableHead>
-                    <TableHead>Qtd</TableHead>
-                    <TableHead className="hidden sm:table-cell">V. Compra</TableHead>
-                    <TableHead>V. Venda</TableHead>
-                    <TableHead className="hidden md:table-cell">Margem</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma peça encontrada</TableCell></TableRow>
-                  ) : filtered.map(p => (
-                    <TableRow key={p.id} className={p.quantidade <= p.estoque_minimo ? "bg-warning/5" : ""}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {p.quantidade <= p.estoque_minimo && <AlertTriangle className="w-3 h-3 text-warning" />}
-                          {p.nome}
-                        </div>
-                      </TableCell>
-                      <TableCell className={p.quantidade <= p.estoque_minimo ? "text-warning font-bold" : ""}>{p.quantidade}</TableCell>
-                      <TableCell className="hidden sm:table-cell">R$ {Number(p.valor_compra).toFixed(2)}</TableCell>
-                      <TableCell>R$ {Number(p.valor_venda).toFixed(2)}</TableCell>
-                      <TableCell className="hidden md:table-cell text-success">
-                        {p.valor_compra > 0 ? ((Number(p.valor_venda) - Number(p.valor_compra)) / Number(p.valor_compra) * 100).toFixed(0) : 0}%
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => { setEditingId(p.id); setForm({ nome: p.nome, quantidade: p.quantidade, valor_compra: Number(p.valor_compra), valor_venda: Number(p.valor_venda), estoque_minimo: p.estoque_minimo }); setDialogOpen(true); }}><Edit className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(p.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+       <Card className="border-border/40 shadow-xl shadow-primary/5 overflow-hidden">
+         <div className="bg-muted/30 p-4 border-b border-border/40 flex items-center gap-2">
+            <Search className="w-4 h-4 text-muted-foreground/50" />
+            <Input placeholder="Buscar peça..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm bg-background border-border/50 h-9" />
+         </div>
+         <div className="overflow-x-auto">
+           {isLoading ? (
+             <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" /></div>
+           ) : (
+             <table className="enterprise-table">
+               <thead>
+                 <tr>
+                   <th>Peça</th>
+                   <th>Qtd</th>
+                   <th className="hidden sm:table-cell">V. Compra</th>
+                   <th>V. Venda</th>
+                   <th className="hidden md:table-cell">Margem</th>
+                   <th className="text-right">Ações</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {filtered.length === 0 ? (
+                   <tr><td colSpan={6} className="text-center py-20 text-muted-foreground font-medium">Nenhuma peça encontrada</td></tr>
+                 ) : filtered.map(p => (
+                   <tr key={p.id} className={p.quantidade <= p.estoque_minimo ? "bg-amber-500/5" : ""}>
+                     <td>
+                       <div className="flex items-center gap-2 font-bold text-[13px] text-foreground/80">
+                         {p.quantidade <= p.estoque_minimo && <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
+                         {p.nome}
+                       </div>
+                     </td>
+                     <td>
+                       <span className={p.quantidade <= p.estoque_minimo ? "text-amber-500 font-black monospace" : "font-bold monospace"}>
+                        {p.quantidade}
+                       </span>
+                     </td>
+                     <td className="hidden sm:table-cell text-[12px] font-bold text-muted-foreground">R$ {Number(p.valor_compra).toFixed(2)}</td>
+                     <td><span className="font-black text-primary monospace tracking-tight">R$ {Number(p.valor_venda).toFixed(2)}</span></td>
+                     <td className="hidden md:table-cell text-xs font-bold text-emerald-500">
+                       {p.valor_compra > 0 ? ((Number(p.valor_venda) - Number(p.valor_compra)) / Number(p.valor_compra) * 100).toFixed(0) : 0}%
+                     </td>
+                     <td>
+                       <div className="flex justify-end gap-1">
+                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50 transition-colors" onClick={() => { setEditingId(p.id); setForm({ nome: p.nome, quantidade: p.quantidade, valor_compra: Number(p.valor_compra), valor_venda: Number(p.valor_venda), estoque_minimo: p.estoque_minimo }); setDialogOpen(true); }}><Edit className="w-4 h-4" /></Button>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-rose-500/10 hover:text-rose-500 transition-colors" onClick={() => deleteMutation.mutate(p.id)}><Trash2 className="w-4 h-4" /></Button>
+                       </div>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           )}
+         </div>
+         <div className="bg-muted/10 p-4 border-t border-border/40">
+           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
+             Estoque monitorado em tempo real
+           </p>
+         </div>
+       </Card>
     </div>
   );
 }

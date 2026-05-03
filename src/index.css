@@ -97,7 +97,54 @@
   .glass-card {
     @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-sm;
   }
-  .stat-card {
-    @apply glass-card rounded-xl p-5 transition-all duration-200 hover:shadow-md hover:border-primary/20;
-  }
-}
+   .stat-card {
+     @apply bg-card rounded-xl p-5 border border-border/50 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5;
+   }
+
+   .monospace {
+     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+   }
+
+   .enterprise-table {
+     @apply w-full text-left border-collapse;
+   }
+
+   .enterprise-table thead th {
+     @apply bg-muted/40 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border px-4 py-3;
+   }
+
+   .enterprise-table tbody tr {
+     @apply border-b border-border/50 transition-colors hover:bg-muted/30;
+   }
+
+   .enterprise-table tbody tr:nth-child(even) {
+     @apply bg-muted/10;
+   }
+
+   .enterprise-table td {
+     @apply px-4 py-3 align-middle;
+   }
+
+   .grad-blue { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+   .grad-green { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+   .grad-orange { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+   .grad-purple { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+
+   /* Floating Label Styles */
+   .floating-label-group {
+     @apply relative mb-4;
+   }
+
+   .floating-label-input {
+     @apply block w-full px-3 py-3 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all peer placeholder-transparent;
+   }
+
+   .floating-label {
+     @apply absolute left-3 top-3 text-sm text-muted-foreground transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-3 peer-focus:-top-2 peer-focus:left-2 peer-focus:text-xs peer-focus:text-primary peer-focus:bg-card peer-focus:px-1 pointer-events-none;
+     top: -0.5rem;
+     left: 0.5rem;
+     font-size: 0.75rem;
+     background-color: hsl(var(--card));
+     padding: 0 0.25rem;
+   }
+ }
