@@ -104,15 +104,3 @@ export function useUpdateOS() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 }
-
-export function useDeleteOS() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("ordens_servico").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ordens_servico"] }); toast.success("OS removida!"); },
-    onError: (e) => toast.error("Erro: " + e.message),
-  });
-}
