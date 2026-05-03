@@ -23,6 +23,8 @@ export type Database = {
           descricao: string
           forma_pagamento: string | null
           id: string
+          origem: string | null
+          origem_id: string | null
           tipo: string
           valor: number
         }
@@ -34,6 +36,8 @@ export type Database = {
           descricao: string
           forma_pagamento?: string | null
           id?: string
+          origem?: string | null
+          origem_id?: string | null
           tipo: string
           valor?: number
         }
@@ -45,6 +49,8 @@ export type Database = {
           descricao?: string
           forma_pagamento?: string | null
           id?: string
+          origem?: string | null
+          origem_id?: string | null
           tipo?: string
           valor?: number
         }
@@ -219,6 +225,7 @@ export type Database = {
           descricao: string
           forma_pagamento: string | null
           id: string
+          orcamento_id: string | null
           ordem_servico_id: string | null
           parcelas: number | null
           status: Database["public"]["Enums"]["conta_status"]
@@ -234,6 +241,7 @@ export type Database = {
           descricao: string
           forma_pagamento?: string | null
           id?: string
+          orcamento_id?: string | null
           ordem_servico_id?: string | null
           parcelas?: number | null
           status?: Database["public"]["Enums"]["conta_status"]
@@ -249,6 +257,7 @@ export type Database = {
           descricao?: string
           forma_pagamento?: string | null
           id?: string
+          orcamento_id?: string | null
           ordem_servico_id?: string | null
           parcelas?: number | null
           status?: Database["public"]["Enums"]["conta_status"]
@@ -263,6 +272,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_orcamento_id_fkey"
+            columns: ["orcamento_id"]
+            isOneToOne: false
+            referencedRelation: "orcamentos"
             referencedColumns: ["id"]
           },
           {

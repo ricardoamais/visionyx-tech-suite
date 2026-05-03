@@ -96,22 +96,38 @@ export function useFecharCaixa() {
   });
 }
 
-export function useVendasCaixa(caixaId: string | null | undefined) {
-  return useQuery({
-    queryKey: ["vendas_caixa", caixaId],
-    enabled: !!caixaId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vendas")
-        .select("*, venda_itens(*, pecas(nome))")
-        .eq("caixa_id", caixaId!)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-}
-
+ export function useMovimentosCaixa(caixaId: string | null | undefined) {
+   return useQuery({
+     queryKey: ["movimentos_caixa", caixaId],
+     enabled: !!caixaId,
+     queryFn: async () => {
+       const { data, error } = await supabase
+         .from("caixa_movimentos")
+         .select("*")
+         .eq("caixa_id", caixaId!)
+         .order("created_at", { ascending: false });
+       if (error) throw error;
+       return data ?? [];
+     },
+   });
+ }
+ 
+ export function useVendasCaixa(caixaId: string | null | undefined) {
+   return useQuery({
+     queryKey: ["vendas_caixa", caixaId],
+     enabled: !!caixaId,
+     queryFn: async () => {
+       const { data, error } = await supabase
+         .from("vendas")
+         .select("*, venda_itens(*, pecas(nome))")
+         .eq("caixa_id", caixaId!)
+         .order("created_at", { ascending: false });
+       if (error) throw error;
+       return data ?? [];
+     },
+   });
+ }
+ 
 export function useCreateVenda() {
   const qc = useQueryClient();
   const { companyId } = useEmpresa();
@@ -127,19 +143,36 @@ export function useCreateVenda() {
       if (!input.itens.length) throw new Error("Adicione ao menos um item");
       const valor_total = input.itens.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0);
 
-      const { data: venda, error: e1 } = await supabase
-        .from("vendas")
-        .insert({
-          company_id: companyId,
-          caixa_id: input.caixa_id,
-          cliente_id: input.cliente_id || null,
-          forma_pagamento: input.forma_pagamento,
-          observacoes: input.observacoes ?? null,
-          valor_total,
-        })
-        .select()
-        .single();
-      if (e1) throw e1;
+       // 1. Criar a venda (registro detalhado)
+       const { data: venda, error: e1 } = await (supabase.from("vendas") as any)
+         .insert({
+           company_id: companyId,
+           caixa_id: input.caixa_id,
+           cliente_id: input.cliente_id || null,
+           forma_pagamento: input.forma_pagamento,
+           observacoes: input.observacoes ?? null,
+           valor_total,
+           origem: 'pdv'
+         })
+         .select()
+         .single();
+       if (e1) throw e1;
+
+       // 2. Lançar no caixa_movimentos (registro financeiro do caixa)
+       const { error: e3 } = await (supabase.from("caixa_movimentos") as any).insert({
+         company_id: companyId,
+         caixa_id: input.caixa_id,
+         tipo: 'entrada',
+         valor: valor_total,
+        descricao: input.itens.map(i => {
+          const peca = (venda.venda_itens as any[])?.find(p => p.peca_id === i.peca_id);
+          return `${i.quantidade}x ${peca?.pecas?.nome || 'Peça'}`;
+        }).join(", ") || `Venda PDV ${venda.id.slice(0, 8)}`,
+         forma_pagamento: input.forma_pagamento,
+         origem: 'pdv',
+         origem_id: venda.id
+       });
+       if (e3) throw e3;
 
       const { error: e2 } = await supabase.from("venda_itens").insert(
         input.itens.map((i) => ({
@@ -158,11 +191,12 @@ export function useCreateVenda() {
         .eq("venda_id", venda.id);
       return { ...venda, venda_itens: itensFull ?? [] };
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["vendas_caixa"] });
-      qc.invalidateQueries({ queryKey: ["pecas"] });
-      toast.success("Venda registrada!");
-    },
+     onSuccess: (_, variables) => {
+       qc.invalidateQueries({ queryKey: ["vendas_caixa"] });
+       qc.invalidateQueries({ queryKey: ["movimentos_caixa"] });
+       qc.invalidateQueries({ queryKey: ["pecas"] });
+       toast.success("Venda registrada!");
+     },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 }
