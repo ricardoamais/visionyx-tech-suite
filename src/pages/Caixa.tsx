@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer } from "lucide-react";
- import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda } from "@/hooks/useCaixa";
+ import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda, useVendasCaixa } from "@/hooks/useCaixa";
 import { usePecas } from "@/hooks/usePecas";
 import { useClientes } from "@/hooks/useClientes";
  import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
@@ -27,7 +27,8 @@ const pagamentoLabels: Record<string, string> = {
 
 export default function Caixa() {
    const { data: caixaAberto, isLoading: loadingCaixa } = useCaixaAberto();
-   const { data: movimentos = [], isLoading: loadingMov } = useMovimentosCaixa(caixaAberto?.id);
+   const { data: movimentos = [], isLoading: loadingMov, refetch: refetchMov } = useMovimentosCaixa(caixaAberto?.id);
+   const { data: todasVendas = [] } = useVendasCaixa(caixaAberto?.id);
   const { data: pecas = [] } = usePecas();
   const { data: clientes = [] } = useClientes();
   const { data: empresa } = useEmpresaConfig();
@@ -186,7 +187,8 @@ export default function Caixa() {
                         <TableHead>Hora / Origem</TableHead>
                         <TableHead>Descrição</TableHead>
                        <TableHead>Pagamento</TableHead>
-                       <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="w-12"></TableHead>
                      </TableRow>
                    </TableHeader>
                    <TableBody>
@@ -218,9 +220,29 @@ export default function Caixa() {
                             {m.descricao}
                          </TableCell>
                          <TableCell className="text-sm">{pagamentoLabels[m.forma_pagamento] || m.forma_pagamento}</TableCell>
-                         <TableCell className={`text-right font-medium ${m.tipo === 'saida' ? 'text-destructive' : 'text-green-600'}`}>
-                           {m.tipo === 'saida' ? '-' : '+'} R$ {Number(m.valor).toFixed(2)}
-                         </TableCell>
+                          <TableCell className={`text-right font-medium ${m.tipo === 'saida' ? 'text-destructive' : 'text-green-600'}`}>
+                            {m.tipo === 'saida' ? '-' : '+'} R$ {Number(m.valor).toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            {m.origem === 'pdv' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const venda = todasVendas.find((v: any) => v.id === m.origem_id);
+                                  if (venda) {
+                                    const cliente = venda.cliente_id ? clientesValidos.find((c: any) => c.id === venda.cliente_id) : null;
+                                    imprimirCupom({ empresa, venda, cliente });
+                                  } else {
+                                    toast.error("Venda não encontrada para impressão");
+                                  }
+                                }}
+                                title="Imprimir cupom"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </TableCell>
                        </TableRow>
                         );
                       })}
