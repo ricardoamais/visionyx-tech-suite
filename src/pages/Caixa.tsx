@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer } from "lucide-react";
-import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useVendasCaixa, useCreateVenda } from "@/hooks/useCaixa";
+ import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda } from "@/hooks/useCaixa";
 import { usePecas } from "@/hooks/usePecas";
 import { useClientes } from "@/hooks/useClientes";
  import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
@@ -26,8 +26,8 @@ const pagamentoLabels: Record<string, string> = {
 };
 
 export default function Caixa() {
-  const { data: caixaAberto, isLoading } = useCaixaAberto();
-  const { data: vendas = [] } = useVendasCaixa(caixaAberto?.id);
+   const { data: caixaAberto, isLoading: loadingCaixa } = useCaixaAberto();
+   const { data: movimentos = [], isLoading: loadingMov } = useMovimentosCaixa(caixaAberto?.id);
   const { data: pecas = [] } = usePecas();
   const { data: clientes = [] } = useClientes();
   const { data: empresa } = useEmpresaConfig();
@@ -52,16 +52,21 @@ export default function Caixa() {
   const pecasValidas = useMemo(() => (pecas ?? []).filter((p: any) => p?.id), [pecas]);
   const clientesValidos = useMemo(() => (clientes ?? []).filter((c: any) => c?.id), [clientes]);
 
-  const totais = useMemo(() => {
-    const t = { dinheiro: 0, cartao_credito: 0, cartao_debito: 0, pix: 0, total: 0 };
-    vendas.forEach((v: any) => {
-      t[v.forma_pagamento as keyof typeof t] += Number(v.valor_total);
-      t.total += Number(v.valor_total);
-    });
-    return t;
-  }, [vendas]);
+   const totais = useMemo(() => {
+     const t = { dinheiro: 0, cartao_credito: 0, cartao_debito: 0, pix: 0, total: 0 };
+     movimentos.forEach((m: any) => {
+       if (m.tipo === 'entrada') {
+         t[m.forma_pagamento as keyof typeof t] += Number(m.valor);
+         t.total += Number(m.valor);
+       } else if (m.tipo === 'saida') {
+         t[m.forma_pagamento as keyof typeof t] -= Number(m.valor);
+         t.total -= Number(m.valor);
+       }
+     });
+     return t;
+   }, [movimentos]);
 
-  const totalEsperado = (Number(caixaAberto?.valor_abertura) || 0) + totais.dinheiro;
+   const totalEsperado = (Number(caixaAberto?.valor_abertura) || 0) + (totais.dinheiro || 0);
 
   function addItem() {
     setItens([...itens, { peca_id: "", quantidade: 1, valor_unitario: 0 }]);
@@ -129,7 +134,7 @@ export default function Caixa() {
 
   const totalVenda = itens.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0);
 
-  if (isLoading) {
+   if (loadingCaixa || loadingMov) {
     return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
   }
 
@@ -169,71 +174,61 @@ export default function Caixa() {
             <Card className="glass-card"><CardContent className="p-4"><p className="text-xs text-muted-foreground">PIX</p><p className="text-lg font-semibold">R$ {totais.pix.toFixed(2)}</p></CardContent></Card>
           </div>
 
-          <Card className="glass-card">
-            <CardHeader><CardTitle className="text-base">Vendas do Caixa ({vendas.length})</CardTitle></CardHeader>
-            <CardContent>
-              {vendas.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nenhuma venda ainda</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                       <TableHead>Hora / Origem</TableHead>
-                       <TableHead>Descrição / Itens</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead className="w-12"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                     {vendas.map((v: any) => {
-                       const isOS = v.origem === 'os';
-                       const isOrc = v.origem === 'orcamento' || v.origem === 'orc';
-                       return (
-                      <TableRow key={v.id}>
-                         <TableCell>
-                           <div className="flex flex-col">
-                             <span>{format(new Date(v.created_at), "HH:mm")}</span>
-                             {(isOS || isOrc) && (
-                               <span className={`text-[10px] font-bold px-1 rounded w-fit ${isOS ? 'bg-primary/20 text-primary' : 'bg-success/20 text-success'}`}>
-                                 {isOS ? 'OS' : 'ORC'}
-                               </span>
-                             )}
-                           </div>
+           <Card className="glass-card">
+             <CardHeader><CardTitle className="text-base">Movimentações do Caixa ({movimentos.length})</CardTitle></CardHeader>
+             <CardContent>
+               {movimentos.length === 0 ? (
+                 <p className="text-center text-muted-foreground py-8">Nenhuma movimentação ainda</p>
+               ) : (
+                 <Table>
+                   <TableHeader>
+                     <TableRow>
+                        <TableHead>Hora / Origem</TableHead>
+                        <TableHead>Descrição</TableHead>
+                       <TableHead>Pagamento</TableHead>
+                       <TableHead className="text-right">Valor</TableHead>
+                     </TableRow>
+                   </TableHeader>
+                   <TableBody>
+                      {movimentos.map((m: any) => {
+                        const isOS = m.origem === 'os';
+                        const isOrc = m.origem === 'orcamento' || m.origem === 'orc';
+                        const isPDV = m.origem === 'pdv' || !m.origem;
+                        const isContrato = m.origem === 'contrato';
+                        
+                        let badgeColor = "bg-muted text-muted-foreground";
+                        let label = "Venda";
+                        
+                        if (isOS) { badgeColor = "bg-blue-100 text-blue-700"; label = "OS"; }
+                        if (isPDV) { badgeColor = "bg-green-100 text-green-700"; label = "PDV"; }
+                        if (isContrato) { badgeColor = "bg-purple-100 text-purple-700"; label = "Contrato"; }
+                        if (isOrc) { badgeColor = "bg-orange-100 text-orange-700"; label = "ORC"; }
+
+                        return (
+                       <TableRow key={m.id}>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <span>{format(new Date(m.created_at), "HH:mm")}</span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-fit ${badgeColor}`}>
+                                {label}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {m.descricao}
                          </TableCell>
-                         <TableCell className="text-xs text-muted-foreground">
-                           {v.observacoes && (isOS || isOrc) ? (
-                             <div className="font-medium text-foreground mb-1">{v.observacoes}</div>
-                           ) : null}
-                           {(v.venda_itens ?? []).length > 0 ? (
-                             (v.venda_itens ?? []).map((i: any) => `${i.quantidade}x ${i.pecas?.nome ?? "-"}`).join(", ")
-                           ) : (
-                             (isOS || isOrc) ? "Pagamento vinculado" : "Sem itens"
-                           )}
-                        </TableCell>
-                        <TableCell>{pagamentoLabels[v.forma_pagamento]}</TableCell>
-                        <TableCell className="text-right font-medium">R$ {Number(v.valor_total).toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const cliente = v.cliente_id ? clientesValidos.find((c: any) => c.id === v.cliente_id) : null;
-                              imprimirCupom({ empresa, venda: v, cliente });
-                            }}
-                            title="Imprimir cupom"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                       );
-                     })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                         <TableCell className="text-sm">{pagamentoLabels[m.forma_pagamento] || m.forma_pagamento}</TableCell>
+                         <TableCell className={`text-right font-medium ${m.tipo === 'saida' ? 'text-destructive' : 'text-green-600'}`}>
+                           {m.tipo === 'saida' ? '-' : '+'} R$ {Number(m.valor).toFixed(2)}
+                         </TableCell>
+                       </TableRow>
+                        );
+                      })}
+                   </TableBody>
+                 </Table>
+               )}
+             </CardContent>
+           </Card>
         </>
       )}
 
