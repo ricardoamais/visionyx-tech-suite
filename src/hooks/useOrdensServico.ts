@@ -31,10 +31,19 @@ export function useCreateOS() {
       pecas?: { peca_id: string; quantidade: number; valor_unitario: number }[];
       servicos?: { descricao: string; quantidade: number; valor_unitario: number; servico_catalogo_id?: string }[];
     }) => {
-      if (!companyId) throw new Error("Empresa não definida");
-      const { pecas, servicos, ...osData } = input;
-      const { data, error } = await supabase.from("ordens_servico").insert({ ...osData, company_id: companyId } as any).select().single();
-      if (error) throw error;
+       if (!companyId) throw new Error("Empresa não definida");
+       const { pecas, servicos, ...osData } = input;
+ 
+       const sanitized = {
+         ...osData,
+         company_id: companyId,
+         equipamento_id: osData.equipamento_id || null,
+         tecnico_id: osData.tecnico_id || null,
+         cliente_id: osData.cliente_id || null,
+       };
+ 
+       const { data, error } = await supabase.from("ordens_servico").insert(sanitized as any).select().single();
+       if (error) throw error;
 
       if (pecas && pecas.length > 0) {
         const { error: pecasErr } = await supabase.from("os_pecas").insert(pecas.map(p => ({ ...p, ordem_servico_id: data.id, company_id: companyId })));
@@ -55,15 +64,22 @@ export function useCreateOS() {
 export function useUpdateOS() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, pecas, servicos, ...input }: {
-      id: string; cliente_id?: string; equipamento_id?: string | null; tecnico_id?: string | null;
-      problema_relatado?: string | null; diagnostico?: string | null; servicos_realizados?: string | null;
-      valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string | null; foto_url?: string | null;
-      pecas?: { peca_id: string; quantidade: number; valor_unitario: number }[];
-      servicos?: { descricao: string; quantidade: number; valor_unitario: number; servico_catalogo_id?: string }[];
-    }) => {
-      const { data, error } = await supabase.from("ordens_servico").update(input as any).eq("id", id).select().single();
-      if (error) throw error;
+     mutationFn: async ({ id, pecas, servicos, ...input }: {
+       id: string; cliente_id?: string; equipamento_id?: string | null; tecnico_id?: string | null;
+       problema_relatado?: string | null; diagnostico?: string | null; servicos_realizados?: string | null;
+       valor_mao_obra?: number; valor_pecas?: number; status?: string; observacoes?: string | null; foto_url?: string | null;
+       pecas?: { peca_id: string; quantidade: number; valor_unitario: number }[];
+       servicos?: { descricao: string; quantidade: number; valor_unitario: number; servico_catalogo_id?: string }[];
+     }) => {
+       const sanitized = {
+         ...input,
+         equipamento_id: input.equipamento_id || null,
+         tecnico_id: input.tecnico_id || null,
+         cliente_id: input.cliente_id || null,
+       };
+ 
+       const { data, error } = await supabase.from("ordens_servico").update(sanitized as any).eq("id", id).select().single();
+       if (error) throw error;
 
       // Simple approach: delete existing and re-insert
       if (pecas) {
