@@ -52,69 +52,66 @@
        const novoStatus = data.tipo === 'os' ? 'entregue' : 'aprovado';
        const finalFormaPagamento = isReceberDepois ? 'fiado' : formaPagamento;
  
-       // 1. Atualizar status da OS/Orçamento
-       const table = data.tipo === 'os' ? 'ordens_servico' : 'orcamentos';
-       const { error: updateErr } = await supabase
-         .from(table)
-         .update({ status: novoStatus } as any)
-         .eq('id', data.id);
+        // 1. Atualizar status da OS/Orçamento
+        const table = data.tipo === 'os' ? 'ordens_servico' : 'orcamentos';
+        const { error: updateErr } = await (supabase.from(table as any) as any)
+          .update({ status: novoStatus } as any)
+          .eq('id', data.id);
        
        if (updateErr) throw updateErr;
  
-       // 2. Atualizar ou Inserir em contas
-       // Tentar encontrar se já existe uma conta para esta OS/Orcamento
+        // 2. Atualizar ou Inserir em contas
+        // Tentar encontrar se já existe uma conta para esta OS/Orcamento
         const colName = data.tipo === 'os' ? 'ordem_servico_id' : 'orcamento_id';
-        const { data: existingConta } = await supabase
-          .from('contas')
+        const { data: existingConta } = await (supabase.from('contas' as any) as any)
           .select('id')
           .eq(colName as any, data.id)
           .maybeSingle();
 
-       if (existingConta) {
-         const { error: contaErr } = await supabase
-           .from('contas')
-           .update({
-             status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
-             forma_pagamento: finalFormaPagamento,
-             valor: totalFinal,
-           } as any)
-           .eq('id', existingConta.id);
-         if (contaErr) throw contaErr;
-       } else {
-         const { error: contaErr } = await supabase.from('contas').insert({
-           company_id: companyId,
-           descricao: `${data.numero} - ${data.cliente_nome}`,
-           valor: totalFinal,
-           vencimento: new Date().toISOString().split('T')[0],
-           tipo: 'receber',
-           categoria: data.tipo === 'os' ? 'Serviços' : 'Orçamentos',
-           status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
-           forma_pagamento: finalFormaPagamento,
-           ordem_servico_id: data.tipo === 'os' ? data.id : null,
-           orcamento_id: data.tipo === 'orcamento' ? data.id : null,
-         } as any);
-         if (contaErr) throw contaErr;
-       }
+        if (existingConta) {
+          const { error: contaErr } = await (supabase.from('contas' as any) as any)
+            .update({
+              status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
+              forma_pagamento: finalFormaPagamento,
+              valor: totalFinal,
+            } as any)
+            .eq('id', existingConta.id);
+          if (contaErr) throw contaErr;
+        } else {
+          const { error: contaErr } = await (supabase.from('contas' as any) as any).insert({
+            company_id: companyId,
+            descricao: `${data.numero} - ${data.cliente_nome}`,
+            valor: totalFinal,
+            vencimento: new Date().toISOString().split('T')[0],
+            tipo: 'receber',
+            categoria: data.tipo === 'os' ? 'Serviços' : 'Orçamentos',
+            status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
+            forma_pagamento: finalFormaPagamento,
+            ordem_servico_id: data.tipo === 'os' ? data.id : null,
+            orcamento_id: data.tipo === 'orcamento' ? data.id : null,
+          } as any);
+          if (contaErr) throw contaErr;
+        }
  
-       // 3. Se não for fiado, lançar no caixa_movimentos
-       if (finalFormaPagamento !== 'fiado') {
-         if (!caixaAberto) {
-           toast.warning("Pagamento registrado no financeiro, mas o caixa está fechado.");
-         } else {
-           const { error: movErr } = await supabase.from('caixa_movimentos').insert({
-             company_id: companyId,
-             caixa_id: caixaAberto.id,
-             tipo: 'entrada',
-             valor: totalFinal,
-             descricao: `${data.numero} - ${data.cliente_nome}`,
-             forma_pagamento: finalFormaPagamento,
-             origem: data.tipo,
-             origem_id: data.id,
-           } as any);
+        // 3. Se não for fiado, lançar no caixa_movimentos
+        if (finalFormaPagamento !== 'fiado') {
+          if (!caixaAberto) {
+            toast.warning("Pagamento registrado no financeiro, mas o caixa está fechado.");
+          } else {
+            const { error: movErr } = await (supabase.from('caixa_movimentos' as any) as any).insert({
+              company_id: companyId,
+              caixa_id: caixaAberto.id,
+              tipo: 'entrada',
+              valor: totalFinal,
+              descricao: `${data.numero} - ${data.cliente_nome}`,
+              forma_pagamento: finalFormaPagamento,
+              origem: data.tipo,
+              origem_id: data.id,
+            } as any);
  
-           if (movErr) throw movErr;
-         }
-       }
+            if (movErr) throw movErr;
+          }
+        }
  
        // 4. Baixa no estoque
        if (data.items) {
@@ -127,13 +124,14 @@
            }
        }
  
-       // 5. Invalidar caches
-       queryClient.invalidateQueries({ queryKey: ['ordens_servico'] });
-       queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
-       queryClient.invalidateQueries({ queryKey: ['contas'] });
-       queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
-       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-       queryClient.invalidateQueries({ queryKey: ['pecas'] });
+        // 5. Invalidar caches
+        queryClient.invalidateQueries({ queryKey: ['ordens_servico'] });
+        queryClient.invalidateQueries({ queryKey: ['orcamentos'] });
+        queryClient.invalidateQueries({ queryKey: ['contas'] });
+        queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
+        queryClient.invalidateQueries({ queryKey: ['movimentos_caixa'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['pecas'] });
  
        toast.success(isReceberDepois ? "OS finalizada e conta a receber gerada!" : "Pagamento recebido com sucesso!");
        onSuccess();
