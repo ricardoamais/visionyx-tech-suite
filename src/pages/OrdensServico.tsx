@@ -428,7 +428,7 @@ export default function OrdensServico() {
             <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+               <Table className="enterprise-table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nº OS</TableHead>
