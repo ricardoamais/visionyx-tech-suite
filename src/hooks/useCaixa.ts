@@ -164,7 +164,10 @@ export function useCreateVenda() {
          caixa_id: input.caixa_id,
          tipo: 'entrada',
          valor: valor_total,
-         descricao: `Venda PDV ${venda.id.slice(0, 8)}`,
+        descricao: input.itens.map(i => {
+          const peca = (venda.venda_itens as any[])?.find(p => p.peca_id === i.peca_id);
+          return `${i.quantidade}x ${peca?.pecas?.nome || 'Peça'}`;
+        }).join(", ") || `Venda PDV ${venda.id.slice(0, 8)}`,
          forma_pagamento: input.forma_pagamento,
          origem: 'pdv',
          origem_id: venda.id
