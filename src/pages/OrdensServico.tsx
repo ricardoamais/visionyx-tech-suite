@@ -452,18 +452,13 @@ export default function OrdensServico() {
                           <Button variant="ghost" size="icon" title="Imprimir" onClick={() => handlePrint(o)}><Printer className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => { setViewing(o); setViewDialog(true); }}><Eye className="w-4 h-4" /></Button>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(o)}><Edit className="w-4 h-4" /></Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Deseja realmente excluir a OS {o.numero}?</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => deleteOS.mutate(o.id)} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={() => setDeleteModal({ open: true, id: o.id, numero: o.numero })}
+                           >
+                             <Trash2 className="w-4 h-4 text-destructive" />
+                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -523,7 +518,16 @@ export default function OrdensServico() {
             </div>
           )}
         </DialogContent>
-      </Dialog>
+       </Dialog>
+ 
+       <DeleteConfirmationModal
+         isOpen={deleteModal.open}
+         onClose={() => setDeleteModal({ ...deleteModal, open: false })}
+         onConfirm={() => handleDelete(deleteModal.id, deleteModal.numero)}
+         title={`⚠️ Excluir OS ${deleteModal.numero}?`}
+         description="Essa ação é irreversível. Todos os dados vinculados serão excluídos permanentemente: pagamentos, movimentos de caixa, peças utilizadas e registros financeiros."
+         isLoading={isDeleting}
+       />
     </div>
   );
 }
