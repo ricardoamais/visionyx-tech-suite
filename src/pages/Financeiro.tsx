@@ -98,60 +98,62 @@ export default function Financeiro() {
 
   function renderTable(list: any[], tipo: "pagar" | "receber") {
     return (
-      <Card className="glass-card">
-        <CardContent className="p-4">
-          <div className="flex justify-end mb-4">
+       <Card className="border-border/40 shadow-xl shadow-primary/5 overflow-hidden">
+         <div className="bg-muted/30 p-4 border-b border-border/40 flex justify-end">
             <Button size="sm" onClick={() => openNew(tipo)}><Plus className="w-4 h-4 mr-2" />Nova Conta</Button>
-          </div>
-          {list.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhuma conta cadastrada</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead className="hidden sm:table-cell">Vencimento</TableHead>
-                  <TableHead className="hidden md:table-cell">Categoria</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-20">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {list.map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.descricao}</TableCell>
-                    <TableCell className={`font-medium ${tipo === "pagar" ? "text-destructive" : "text-success"}`}>
-                      R$ {Number(c.valor).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {c.vencimento ? format(new Date(c.vencimento), "dd/MM/yyyy") : "-"}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{c.categoria || "-"}</TableCell>
-                    <TableCell>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        c.status === "pago" || c.status === "recebido"
-                          ? "bg-success/15 text-success"
-                          : c.status === "vencido"
-                          ? "bg-destructive/15 text-destructive"
-                          : "bg-warning/15 text-warning"
-                      }`}>
-                        {statusLabels[c.status] || c.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteConta.mutate(c.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+         </div>
+         <div className="overflow-x-auto">
+           {list.length === 0 ? (
+             <p className="text-center text-muted-foreground py-20 font-medium">Nenhuma conta cadastrada</p>
+           ) : (
+             <table className="enterprise-table">
+               <thead>
+                 <tr>
+                   <th>Descrição</th>
+                   <th>Valor</th>
+                   <th className="hidden sm:table-cell">Vencimento</th>
+                   <th className="hidden md:table-cell">Categoria</th>
+                   <th>Status</th>
+                   <th className="text-right">Ações</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {list.map(c => (
+                   <tr key={c.id}>
+                     <td><span className="font-bold text-[13px] text-foreground/80">{c.descricao}</span></td>
+                     <td>
+                       <span className={`font-black monospace tracking-tight ${tipo === "pagar" ? "text-rose-500" : "text-emerald-500"}`}>
+                         R$ {Number(c.valor).toFixed(2)}
+                       </span>
+                     </td>
+                     <td className="hidden sm:table-cell">
+                       <span className="text-[12px] font-bold text-muted-foreground">{c.vencimento ? format(new Date(c.vencimento), "dd/MM/yyyy") : "-"}</span>
+                     </td>
+                     <td className="hidden md:table-cell text-xs opacity-70 font-medium">{c.categoria || "-"}</td>
+                     <td>
+                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                         c.status === "pago" || c.status === "recebido"
+                           ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                           : c.status === "vencido"
+                           ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                           : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                       }`}>
+                         {statusLabels[c.status] || c.status}
+                       </span>
+                     </td>
+                     <td>
+                       <div className="flex justify-end gap-1">
+                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50 transition-colors" onClick={() => openEdit(c)}><Pencil className="w-4 h-4" /></Button>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-rose-500/10 hover:text-rose-500 transition-colors" onClick={() => deleteConta.mutate(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                       </div>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           )}
+         </div>
+       </Card>
     );
   }
 
