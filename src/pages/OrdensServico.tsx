@@ -74,11 +74,38 @@ const emptyForm = {
 };
 
 export default function OrdensServico() {
-  const { data: ordens, isLoading } = useOrdensServico();
-  const { data: clientes, refetch: refetchClientes } = useClientes();
-  const createOS = useCreateOS();
-  const updateOS = useUpdateOS();
-  const deleteOS = useDeleteOS();
+   const queryClient = useQueryClient();
+   const { data: ordens, isLoading } = useOrdensServico();
+   const { data: clientes, refetch: refetchClientes } = useClientes();
+   const createOS = useCreateOS();
+   const updateOS = useUpdateOS();
+ 
+   const [deleteModal, setDeleteModal] = useState<{ open: boolean; id: string; numero: string }>({ open: false, id: "", numero: "" });
+   const [isDeleting, setIsDeleting] = useState(false);
+ 
+   const handleDelete = async (id: string, numero: string) => {
+     try {
+       setIsDeleting(true);
+       const { error } = await supabase.functions.invoke('delete-ordem-servico', {
+         body: { osId: id }
+       });
+       
+       if (error) throw error;
+ 
+       toast.success(`OS ${numero} excluída com sucesso`);
+       queryClient.invalidateQueries({ queryKey: ['ordens_servico'] });
+       queryClient.invalidateQueries({ queryKey: ['contas'] });
+       queryClient.invalidateQueries({ queryKey: ['vendas_caixa'] });
+       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+       queryClient.invalidateQueries({ queryKey: ['relatorios'] });
+       setDeleteModal({ open: false, id: "", numero: "" });
+     } catch (err: any) {
+       console.error(err);
+       toast.error('Erro ao excluir OS: ' + (err.message || 'Erro desconhecido'));
+     } finally {
+       setIsDeleting(false);
+     }
+   };
   const { data: empresa } = useEmpresaConfig();
   const { role } = useAuth();
   const { data: pecasData } = usePecas();
