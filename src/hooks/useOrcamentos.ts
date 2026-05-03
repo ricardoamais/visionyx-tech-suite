@@ -78,15 +78,3 @@ export function useUpdateOrcamento() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 }
-
-export function useDeleteOrcamento() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("orcamentos").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["orcamentos"] }); toast.success("Orçamento removido!"); },
-    onError: (e) => toast.error("Erro: " + e.message),
-  });
-}
