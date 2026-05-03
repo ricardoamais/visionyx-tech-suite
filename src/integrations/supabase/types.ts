@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      caixa_movimentos: {
+        Row: {
+          caixa_id: string | null
+          company_id: string
+          created_at: string | null
+          data_movimento: string | null
+          descricao: string
+          forma_pagamento: string | null
+          id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          caixa_id?: string | null
+          company_id: string
+          created_at?: string | null
+          data_movimento?: string | null
+          descricao: string
+          forma_pagamento?: string | null
+          id?: string
+          tipo: string
+          valor?: number
+        }
+        Update: {
+          caixa_id?: string | null
+          company_id?: string
+          created_at?: string | null
+          data_movimento?: string | null
+          descricao?: string
+          forma_pagamento?: string | null
+          id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caixa_movimentos_caixa_id_fkey"
+            columns: ["caixa_id"]
+            isOneToOne: false
+            referencedRelation: "caixas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caixa_movimentos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       caixas: {
         Row: {
           company_id: string
@@ -219,6 +270,128 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contrato_pagamentos: {
+        Row: {
+          company_id: string | null
+          contrato_id: string | null
+          created_at: string | null
+          data_pagamento: string | null
+          forma_pagamento: string | null
+          id: string
+          mes_referencia: string
+          observacoes: string | null
+          status: string
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          company_id?: string | null
+          contrato_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          mes_referencia: string
+          observacoes?: string | null
+          status?: string
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          company_id?: string | null
+          contrato_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          mes_referencia?: string
+          observacoes?: string | null
+          status?: string
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contrato_pagamentos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contrato_pagamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contratos: {
+        Row: {
+          cnpj: string | null
+          company_id: string | null
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          descricao_servicos: string | null
+          dia_vencimento: number
+          empresa_nome: string
+          endereco: string | null
+          id: string
+          observacoes: string | null
+          status: string
+          valor_mensal: number
+        }
+        Insert: {
+          cnpj?: string | null
+          company_id?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          descricao_servicos?: string | null
+          dia_vencimento?: number
+          empresa_nome: string
+          endereco?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string
+          valor_mensal?: number
+        }
+        Update: {
+          cnpj?: string | null
+          company_id?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          descricao_servicos?: string | null
+          dia_vencimento?: number
+          empresa_nome?: string
+          endereco?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
