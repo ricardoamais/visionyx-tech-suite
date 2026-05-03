@@ -1,4 +1,4 @@
- import { useState, useMemo } from "react";
+ import { useState, useMemo, useEffect } from "react";
  import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
@@ -10,8 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer } from "lucide-react";
- import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda, useVendasCaixa } from "@/hooks/useCaixa";
+ import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer, Search, FileText, Wrench, CheckCircle2 } from "lucide-react";
+  import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda, useVendasCaixa, useRegistrarRecebimentoAvulso } from "@/hooks/useCaixa";
+ import { useOrcamentos } from "@/hooks/useOrcamentos";
+ import { useOrdensServico } from "@/hooks/useOrdensServico";
+ import { printRecibo } from "@/components/caixa/PrintRecibo";
+ import { useQueryClient } from "@tanstack/react-query";
+ import { supabase } from "@/integrations/supabase/client";
 import { usePecas } from "@/hooks/usePecas";
 import { useClientes } from "@/hooks/useClientes";
  import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
@@ -39,7 +44,117 @@ export default function Caixa() {
 
   const [openAbrir, setOpenAbrir] = useState(false);
   const [openFechar, setOpenFechar] = useState(false);
-  const [openVenda, setOpenVenda] = useState(false);
+   const [openVenda, setOpenVenda] = useState(false);
+   const [openSucesso, setOpenSucesso] = useState(false);
+   const [dadosSucesso, setDadosSucesso] = useState<any>(null);
+ 
+   const [buscaTermo, setBuscaTermo] = useState("");
+   const [itemSelecionado, setItemSelecionado] = useState<any>(null);
+   const { data: orcamentos = [] } = useOrcamentos();
+   const { data: ordensServico = [] } = useOrdensServico();
+   const qc = useQueryClient();
+ 
+   const resultadosBusca = useMemo(() => {
+     if (buscaTermo.length < 3) return { orcamentos: [], os: [] };
+     const termo = buscaTermo.toLowerCase();
+     
+     const orcFiltrados = orcamentos.filter((o: any) => 
+       o.status === 'aprovado' && 
+       o.clientes?.nome?.toLowerCase().includes(termo)
+     );
+ 
+     const osFiltradas = ordensServico.filter((os: any) => 
+       (os.status === 'finalizado' || os.status === 'entregue') && 
+       os.clientes?.nome?.toLowerCase().includes(termo)
+     );
+ 
+     return { orcamentos: orcFiltrados, os: osFiltradas };
+   }, [buscaTermo, orcamentos, ordensServico]);
+ 
+   function handleSelecionarItem(item: any, tipo: 'orcamento' | 'os') {
+     const desc = tipo === 'orcamento' ? `ORC-${item.id.slice(0,4)} - ${item.clientes?.nome}` : `OS-${item.id.slice(0,4)} - ${item.clientes?.nome}`;
+     setItemSelecionado({
+       id: item.id,
+       tipo,
+       cliente: item.clientes?.nome,
+       cliente_id: item.cliente_id,
+       valor: Number(item.valor_total || (Number(item.valor_mao_obra || 0) + Number(item.valor_pecas || 0))),
+       descricao: desc,
+       numero: tipo === 'orcamento' ? `ORC-${item.id.slice(0,4)}` : `OS-${item.id.slice(0,4)}`
+     });
+     setBuscaTermo("");
+   }
+ 
+   async function handleConfirmarRecebimento() {
+     if (!caixaAberto || !itemSelecionado) return;
+     
+     try {
+       const { id, tipo, valor, descricao, forma_pagamento, numero, cliente } = {
+         ...itemSelecionado,
+         forma_pagamento: formaPagamento
+       };
+ 
+       // 1. Inserir movimento no caixa
+       const { error: errorMov } = await supabase.from('caixa_movimentos').insert({
+         company_id: caixaAberto.company_id,
+         caixa_id: caixaAberto.id,
+         tipo: 'entrada',
+         valor: valor,
+         descricao: descricao,
+         forma_pagamento: forma_pagamento,
+         origem: tipo,
+         origem_id: id,
+       });
+       if (errorMov) throw errorMov;
+ 
+       // 2. Atualizar conta para recebido
+       const { error: errorConta } = await supabase.from('contas')
+         .update({
+           status: 'recebido',
+           forma_pagamento: forma_pagamento,
+           data_pagamento: new Date().toISOString().split('T')[0],
+         })
+         .eq(tipo === 'orcamento' ? 'orcamento_id' : 'ordem_servico_id', id);
+       // errorConta is fine if it doesn't exist yet, but should exist for approved orc/finalized os
+ 
+       // 3. Atualizar status do documento original
+       if (tipo === 'os') {
+         await supabase.from('ordens_servico').update({ status: 'entregue' }).eq('id', id);
+       } else {
+         await supabase.from('orcamentos').update({ status: 'pago' }).eq('id', id);
+       }
+ 
+       // 4. Imprimir recibo
+       printRecibo({
+         numero,
+         cliente,
+         descricao,
+         valor,
+         formaPagamento: forma_pagamento,
+         empresa
+       });
+ 
+       // 5. Feedback Visual
+       setDadosSucesso({ valor, forma_pagamento });
+       setOpenSucesso(true);
+       setOpenVenda(false);
+       setItemSelecionado(null);
+       resetVenda();
+ 
+       // 6. Invalidar queries
+       qc.invalidateQueries({ queryKey: ['movimentos_caixa'] });
+       qc.invalidateQueries({ queryKey: ['contas'] });
+       qc.invalidateQueries({ queryKey: ['ordens_servico'] });
+       qc.invalidateQueries({ queryKey: ['orcamentos'] });
+       qc.invalidateQueries({ queryKey: ['dashboard'] });
+       qc.invalidateQueries({ queryKey: ['relatorios'] });
+ 
+       setTimeout(() => setOpenSucesso(false), 3000);
+     } catch (error: any) {
+       toast.error("Erro ao registrar recebimento: " + error.message);
+     }
+   }
+ 
 
   const [valorAbertura, setValorAbertura] = useState("");
   const [obsAbertura, setObsAbertura] = useState("");
@@ -295,61 +410,158 @@ export default function Caixa() {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Nova Venda</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-               <div>
-                 <Label>Cliente (opcional)</Label>
-                 <div className="flex gap-2">
-                   <Select value={clienteId || undefined} onValueChange={(v) => setClienteId(v)}>
-                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                     <SelectContent>
-                       {clientesValidos.length === 0 ? (
-                         <SelectItem value="__empty" disabled>Nenhum cliente</SelectItem>
-                       ) : (
-                         clientesValidos.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
+             {!itemSelecionado ? (
+               <>
+                 <div className="relative">
+                   <Label>Pesquisar Cliente, Orçamento ou OS</Label>
+                   <div className="relative mt-1">
+                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                     <Input 
+                       placeholder="Digite o nome do cliente (mín. 3 caracteres)..." 
+                       className="pl-9"
+                       value={buscaTermo}
+                       onChange={(e) => setBuscaTermo(e.target.value)}
+                     />
+                   </div>
+                   
+                   {(resultadosBusca.orcamentos.length > 0 || resultadosBusca.os.length > 0) && (
+                     <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-auto">
+                       {resultadosBusca.orcamentos.length > 0 && (
+                         <div className="p-2">
+                           <div className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-1 flex items-center gap-1">
+                             <FileText className="w-3 h-3" /> Orçamentos Aprovados
+                           </div>
+                           {resultadosBusca.orcamentos.map((orc: any) => (
+                             <button
+                               key={orc.id}
+                               className="w-full text-left px-3 py-2 text-sm hover:bg-accent rounded-sm flex justify-between items-center"
+                               onClick={() => handleSelecionarItem(orc, 'orcamento')}
+                             >
+                               <span>ORC-{orc.id.slice(0,4)} — {orc.clientes?.nome}</span>
+                               <span className="font-semibold">R$ {Number(orc.valor_total).toFixed(2)}</span>
+                             </button>
+                           ))}
+                         </div>
                        )}
-                     </SelectContent>
-                   </Select>
-                   <QuickAddCliente onSuccess={(id) => setClienteId(id)} />
+                       {resultadosBusca.os.length > 0 && (
+                         <div className="p-2 border-t">
+                           <div className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-1 flex items-center gap-1">
+                             <Wrench className="w-3 h-3" /> Ordens de Serviço
+                           </div>
+                           {resultadosBusca.os.map((os: any) => (
+                             <button
+                               key={os.id}
+                               className="w-full text-left px-3 py-2 text-sm hover:bg-accent rounded-sm flex justify-between items-center"
+                               onClick={() => handleSelecionarItem(os, 'os')}
+                             >
+                               <span>OS-{os.id.slice(0,4)} — {os.clientes?.nome}</span>
+                               <span className="font-semibold">R$ {(Number(os.valor_mao_obra || 0) + Number(os.valor_pecas || 0)).toFixed(2)}</span>
+                             </button>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                   )}
                  </div>
-               </div>
-              <div>
-                <Label>Forma de Pagamento *</Label>
-                <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as any)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                    <SelectItem value="cartao_credito">Cartão Crédito</SelectItem>
-                    <SelectItem value="cartao_debito">Cartão Débito</SelectItem>
-                    <SelectItem value="pix">PIX</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <Label>Itens</Label>
-                <Button size="sm" variant="outline" onClick={addItem}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
-              </div>
-              {itens.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Nenhum item adicionado</p>
-              ) : (
-                <div className="space-y-2">
-                  {itens.map((it, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-6">
-                        <Select value={it.peca_id || undefined} onValueChange={(v) => updateItem(i, { peca_id: v })}>
-                          <SelectTrigger><SelectValue placeholder="Peça" /></SelectTrigger>
+ 
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Cliente (opcional)</Label>
+                      <div className="flex gap-2">
+                        <Select value={clienteId || undefined} onValueChange={(v) => setClienteId(v)}>
+                          <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                           <SelectContent>
-                            {pecasValidas.length === 0 ? (
-                              <SelectItem value="__empty" disabled>Sem peças</SelectItem>
+                            {clientesValidos.length === 0 ? (
+                              <SelectItem value="__empty" disabled>Nenhum cliente</SelectItem>
                             ) : (
-                              pecasValidas.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nome} (est: {p.quantidade})</SelectItem>)
+                              clientesValidos.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)
                             )}
                           </SelectContent>
                         </Select>
+                        <QuickAddCliente onSuccess={(id) => setClienteId(id)} />
                       </div>
-                      <div className="col-span-2"><Input type="number" min="1" value={it.quantidade} onChange={(e) => updateItem(i, { quantidade: parseInt(e.target.value) || 1 })} /></div>
+                    </div>
+                   <div>
+                     <Label>Forma de Pagamento *</Label>
+                     <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as any)}>
+                       <SelectTrigger><SelectValue /></SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                         <SelectItem value="cartao_credito">Cartão Crédito</SelectItem>
+                         <SelectItem value="cartao_debito">Cartão Débito</SelectItem>
+                         <SelectItem value="pix">PIX</SelectItem>
+                       </SelectContent>
+                     </Select>
+                   </div>
+                 </div>
+ 
+                 <div>
+                   <div className="flex justify-between items-center mb-2">
+                     <Label>Itens</Label>
+                     <Button size="sm" variant="outline" onClick={addItem}><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
+                   </div>
+                   {itens.length === 0 ? (
+                     <p className="text-xs text-muted-foreground text-center py-4">Nenhum item adicionado</p>
+                   ) : (
+                     <div className="space-y-2">
+                       {itens.map((it, i) => (
+                         <div key={i} className="grid grid-cols-12 gap-2 items-end">
+                           <div className="col-span-6">
+                             <Select value={it.peca_id || undefined} onValueChange={(v) => updateItem(i, { peca_id: v })}>
+                               <SelectTrigger><SelectValue placeholder="Peça" /></SelectTrigger>
+                               <SelectContent>
+                                 {pecasValidas.length === 0 ? (
+                                   <SelectItem value="__empty" disabled>Sem peças</SelectItem>
+                                 ) : (
+                                   pecasValidas.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.nome} (est: {p.quantidade})</SelectItem>)
+                                 )}
+                               </SelectContent>
+                             </Select>
+                           </div>
+                           <div className="col-span-2"><Input type="number" min="1" value={it.quantidade} onChange={(e) => updateItem(i, { quantidade: parseInt(e.target.value) || 1 })} /></div>
+                           <div className="col-span-3"><Input type="number" step="0.01" value={it.valor_unitario} onChange={(e) => updateItem(i, { valor_unitario: parseFloat(e.target.value) || 0 })} /></div>
+                           <div className="col-span-1"><Button variant="ghost" size="icon" onClick={() => removeItem(i)}><Trash2 className="w-4 h-4 text-destructive" /></Button></div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+               </>
+             ) : (
+               <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                 <div className="flex justify-between items-start">
+                   <div>
+                     <h3 className="font-bold text-lg">{itemSelecionado.numero} — {itemSelecionado.cliente}</h3>
+                     <p className="text-sm text-muted-foreground">{itemSelecionado.tipo === 'orcamento' ? 'Orçamento Aprovado' : 'Ordem de Serviço Finalizada'}</p>
+                   </div>
+                   <Button variant="ghost" size="sm" onClick={() => setItemSelecionado(null)}>Trocar</Button>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <Label>Valor Total</Label>
+                     <Input 
+                       type="number" 
+                       step="0.01" 
+                       value={itemSelecionado.valor} 
+                       onChange={(e) => setItemSelecionado({...itemSelecionado, valor: parseFloat(e.target.value) || 0})} 
+                     />
+                   </div>
+                   <div>
+                     <Label>Forma de Pagamento *</Label>
+                     <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as any)}>
+                       <SelectTrigger><SelectValue /></SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                         <SelectItem value="cartao_credito">Cartão Crédito</SelectItem>
+                         <SelectItem value="cartao_debito">Cartão Débito</SelectItem>
+                         <SelectItem value="pix">PIX</SelectItem>
+                       </SelectContent>
+                     </Select>
+                   </div>
+                 </div>
+               </div>
+             )}
                       <div className="col-span-3"><Input type="number" step="0.01" value={it.valor_unitario} onChange={(e) => updateItem(i, { valor_unitario: parseFloat(e.target.value) || 0 })} /></div>
                       <div className="col-span-1"><Button variant="ghost" size="icon" onClick={() => removeItem(i)}><Trash2 className="w-4 h-4 text-destructive" /></Button></div>
                     </div>
@@ -364,10 +576,37 @@ export default function Caixa() {
               <span>Total:</span><span>R$ {totalVenda.toFixed(2)}</span>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenVenda(false)}>Cancelar</Button>
-            <Button onClick={handleVenda} disabled={criarVenda.isPending || itens.length === 0}>Registrar Venda</Button>
-          </DialogFooter>
+           <DialogFooter>
+             <Button variant="outline" onClick={() => { setOpenVenda(false); setItemSelecionado(null); }}>Cancelar</Button>
+             {itemSelecionado ? (
+               <Button onClick={handleConfirmarRecebimento}>Confirmar Recebimento</Button>
+             ) : (
+               <Button onClick={handleVenda} disabled={criarVenda.isPending || itens.length === 0}>Registrar Venda</Button>
+             )}
+           </DialogFooter>
+       {/* Sucesso Feedback */}
+       <Dialog open={openSucesso} onOpenChange={setOpenSucesso}>
+         <DialogContent className="sm:max-w-md">
+           <div className="flex flex-col items-center justify-center py-6 space-y-4">
+             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+               <CheckCircle2 className="w-10 h-10 text-green-600" />
+             </div>
+             <div className="text-center">
+               <h3 className="text-xl font-bold text-green-700">Pagamento registrado!</h3>
+               <p className="text-muted-foreground">O recebimento foi processado com sucesso.</p>
+             </div>
+             {dadosSucesso && (
+               <div className="w-full p-4 bg-muted rounded-lg text-center">
+                 <p className="text-sm text-muted-foreground">Valor Recebido</p>
+                 <p className="text-2xl font-bold">R$ {Number(dadosSucesso.valor).toFixed(2)}</p>
+                 <p className="text-xs mt-1 uppercase font-semibold text-muted-foreground">
+                   {pagamentoLabels[dadosSucesso.forma_pagamento] || dadosSucesso.forma_pagamento}
+                 </p>
+               </div>
+             )}
+           </div>
+         </DialogContent>
+       </Dialog>
         </DialogContent>
       </Dialog>
     </div>
