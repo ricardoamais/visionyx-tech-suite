@@ -23,7 +23,8 @@ import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
 import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
 import { printOrcamento } from "@/components/PrintOS";
- import { toast } from "sonner";
+  import { toast } from "sonner";
+  import { supabase } from "@/integrations/supabase/client";
  import { QuickAddCliente } from "@/components/QuickAddCliente";
 
 const statusMap: Record<string, string> = { pendente: "Pendente", aprovado: "Aprovado", reprovado: "Reprovado" };
