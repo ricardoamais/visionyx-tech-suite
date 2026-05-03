@@ -15,7 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Eye, Edit, Trash2, Loader2, Printer, ArrowRight, CheckCircle } from "lucide-react";
-import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento, useDeleteOrcamento } from "@/hooks/useOrcamentos";
+ import { useOrcamentos, useCreateOrcamento, useUpdateOrcamento, useDeleteOrcamento } from "@/hooks/useOrcamentos";
+ import { ModalRecebimento } from "@/components/ModalRecebimento";
 import { useCreateOS } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
 import { useCreateConta } from "@/hooks/useContas";
@@ -54,8 +55,9 @@ export default function Orcamentos() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialog, setViewDialog] = useState(false);
-  const [viewing, setViewing] = useState<any>(null);
-  const [editing, setEditing] = useState<any>(null);
+   const [viewing, setViewing] = useState<any>(null);
+   const [editing, setEditing] = useState<any>(null);
+   const [recebimentoData, setRecebimentoData] = useState<any>(null);
 
   const form = useForm<OrcamentoFormValues>({
     resolver: zodResolver(orcamentoSchema),
@@ -113,16 +115,21 @@ export default function Orcamentos() {
     }
   });
 
-  const handleMarcarRecebido = (o: any) => {
-    const valor = Number(o.valor_total);
-    if (valor <= 0) { toast.error("Orçamento sem valor para registrar"); return; }
-    const clienteNome = (o as any).clientes?.nome ?? "Cliente";
-    createConta.mutate({
-      descricao: `${o.numero} - ${clienteNome}`,
-      valor, vencimento: new Date().toISOString().split("T")[0],
-      tipo: "receber", categoria: "Orçamentos", status: "recebido",
-    }, { onSuccess: () => toast.success(`R$ ${valor.toFixed(2)} registrado no financeiro como recebido!`) });
-  };
+   const handleMarcarRecebido = (o: any) => {
+     const valorTotal = Number(o.valor_total);
+     if (valorTotal <= 0) { toast.error("Orçamento sem valor para registrar"); return; }
+     
+     setRecebimentoData({
+       id: o.id,
+       numero: o.numero,
+       cliente_id: o.cliente_id,
+       cliente_nome: (o as any).clientes?.nome || "Cliente",
+       valor_mao_obra: valorTotal, // No orçamento simplificado, usamos o total como mao de obra no modal
+       valor_pecas: 0,
+       tipo: 'orcamento',
+       items: (o as any).orcamento_itens || []
+     });
+   };
 
   const handleEdit = (o: any) => {
     if (o.status === "aprovado") { toast.error("Orçamentos aprovados não podem ser editados."); return; }
@@ -137,8 +144,19 @@ export default function Orcamentos() {
 
   const isSaving = createOrc.isPending || updateOrc.isPending;
 
-  return (
-    <div className="space-y-6">
+   return (
+     <div className="space-y-6">
+       {recebimentoData && (
+         <ModalRecebimento 
+           isOpen={!!recebimentoData}
+           onClose={() => setRecebimentoData(null)}
+           onSuccess={() => {
+             setRecebimentoData(null);
+             // Opcional: fechar outros dialogs ou recarregar
+           }}
+           data={recebimentoData}
+         />
+       )}
       <PageHeader title="Orçamentos" description="Gerencie orçamentos para clientes">
         <Button onClick={() => { resetForm(); refetchClientes(); setDialogOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />Novo Orçamento
