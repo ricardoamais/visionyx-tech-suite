@@ -2,9 +2,10 @@
  import { PageHeader } from "@/components/PageHeader";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
- import { useOrdensServico } from "@/hooks/useOrdensServico";
- import { useOrcamentos } from "@/hooks/useOrcamentos";
- import { useContas } from "@/hooks/useContas";
+  import { useOrdensServico } from "@/hooks/useOrdensServico";
+  import { useOrcamentos } from "@/hooks/useOrcamentos";
+  import { useContas } from "@/hooks/useContas";
+  import { useMaintenanceContracts } from "@/hooks/useMaintenanceContracts";
  import { StatCard } from "@/components/StatCard";
  import { Button } from "@/components/ui/button";
  import { 
@@ -27,9 +28,10 @@ export default function Relatorios() {
    });
    const [activeFilter, setActiveFilter] = useState<string>("30d");
  
-   const { data: ordensServico = [] } = useOrdensServico();
-   const { data: orcamentos = [] } = useOrcamentos();
-   const { data: contas = [] } = useContas();
+    const { data: ordensServico = [] } = useOrdensServico();
+    const { data: orcamentos = [] } = useOrcamentos();
+    const { data: contas = [] } = useContas();
+    const { data: contratos = [] } = useMaintenanceContracts();
  
    const handleFilterChange = (filter: string) => {
      setActiveFilter(filter);
@@ -61,23 +63,28 @@ export default function Relatorios() {
        }
      };
  
-     const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
- 
-     const os = ordensServico.filter(o => isWithinInterval(parseISO(o.created_at), interval));
-     const orcs = orcamentos.filter(o => isWithinInterval(parseISO(o.created_at), interval));
-     const receipts = contas.filter(c => 
-       c.tipo === "receber" && 
-       c.status === "recebido" && 
-       c.vencimento && 
-       isWithinInterval(parseISO(c.vencimento), interval)
-     );
- 
-     const osAbertas = os.filter(o => ["aberto", "em_analise", "aguardando_aprovacao", "em_manutencao"].includes(o.status)).length;
-     const osFinalizadas = os.filter(o => ["finalizado", "entregue"].includes(o.status)).length;
-     const faturamento = receipts.reduce((acc, curr) => acc + Number(curr.valor), 0);
-     const ticketMedio = osFinalizadas > 0 ? faturamento / osFinalizadas : 0;
-     const orcAprovados = orcs.filter(o => o.status === "aprovado").length;
-     const orcRecusados = orcs.filter(o => o.status === "reprovado").length;
+      const interval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to) };
+  
+      const os = ordensServico.filter(o => isWithinInterval(parseISO(o.created_at), interval));
+      const orcs = orcamentos.filter(o => isWithinInterval(parseISO(o.created_at), interval));
+      const receipts = contas.filter(c => 
+        c.tipo === "receber" && 
+        c.status === "recebido" && 
+        c.vencimento && 
+        isWithinInterval(parseISO(c.vencimento), interval)
+      );
+  
+      const contractReceipts = receipts.filter(c => c.categoria === "Contratos");
+      const osReceipts = receipts.filter(c => c.categoria !== "Contratos");
+  
+      const osAbertas = os.filter(o => ["aberto", "em_analise", "aguardando_aprovacao", "em_manutencao"].includes(o.status)).length;
+      const osFinalizadas = os.filter(o => ["finalizado", "entregue"].includes(o.status)).length;
+      const faturamento = receipts.reduce((acc, curr) => acc + Number(curr.valor), 0);
+      const receitaContratos = contractReceipts.reduce((acc, curr) => acc + Number(curr.valor), 0);
+      const ticketMedio = osFinalizadas > 0 ? osReceipts.reduce((acc, curr) => acc + Number(curr.valor), 0) / osFinalizadas : 0;
+      const ticketMedioContrato = contratos.length > 0 ? receitaContratos / contratos.length : 0;
+      const orcAprovados = orcs.filter(o => o.status === "aprovado").length;
+      const orcRecusados = orcs.filter(o => o.status === "reprovado").length;
  
      // Charts data
      const faturamentoPorDia = receipts.reduce((acc: any[], curr) => {
@@ -123,14 +130,20 @@ export default function Relatorios() {
        .sort((a, b) => b.total - a.total)
        .slice(0, 5);
  
-     return {
-       summary: { osAbertas, osFinalizadas, faturamento, ticketMedio, orcAprovados, orcRecusados },
-       faturamentoPorDia,
-       statusOSData,
-       servicosMaisRealizados,
-       topClientes
-     };
-   }, [dateRange, ordensServico, orcamentos, contas]);
+      const topContratos = contratos
+        .sort((a, b) => Number(b.valor_mensal) - Number(a.valor_mensal))
+        .slice(0, 5)
+        .map(c => ({ nome: c.empresa_nome, valor: Number(c.valor_mensal) }));
+  
+      return {
+        summary: { osAbertas, osFinalizadas, faturamento, receitaContratos, ticketMedio, ticketMedioContrato, orcAprovados, orcRecusados },
+        faturamentoPorDia,
+        statusOSData,
+        servicosMaisRealizados,
+        topClientes,
+        topContratos
+      };
+    }, [dateRange, ordensServico, orcamentos, contas, contratos]);
  
    const formatCurrency = (val: number) => 
      new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
@@ -232,14 +245,16 @@ export default function Relatorios() {
          </Popover>
        </div>
  
-       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-         <StatCard title="OS Abertas" value={filteredData.summary.osAbertas} icon={Clock} />
-         <StatCard title="OS Finalizadas" value={filteredData.summary.osFinalizadas} icon={CheckCircle2} />
-         <StatCard title="Faturamento Total" value={formatCurrency(filteredData.summary.faturamento)} icon={FileDown} />
-         <StatCard title="Ticket Médio" value={formatCurrency(filteredData.summary.ticketMedio)} icon={CalendarIcon} />
-         <StatCard title="Orçamentos Aprovados" value={filteredData.summary.orcAprovados} icon={ClipboardList} />
-         <StatCard title="Orçamentos Recusados" value={filteredData.summary.orcRecusados} icon={XCircle} />
-       </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard title="Faturamento Total" value={formatCurrency(filteredData.summary.faturamento)} icon={FileDown} />
+          <StatCard title="Receita Contratos" value={formatCurrency(filteredData.summary.receitaContratos)} icon={Building} />
+          <StatCard title="Ticket Médio OS" value={formatCurrency(filteredData.summary.ticketMedio)} icon={CalendarIcon} />
+          <StatCard title="Ticket Médio Contrato" value={formatCurrency(filteredData.summary.ticketMedioContrato)} icon={TrendingUp} />
+          <StatCard title="OS Abertas" value={filteredData.summary.osAbertas} icon={Clock} />
+          <StatCard title="OS Finalizadas" value={filteredData.summary.osFinalizadas} icon={CheckCircle2} />
+          <StatCard title="Orçamentos Aprovados" value={filteredData.summary.orcAprovados} icon={ClipboardList} />
+          <StatCard title="Orçamentos Recusados" value={filteredData.summary.orcRecusados} icon={XCircle} />
+        </div>
  
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <Card className="glass-card">
@@ -295,28 +310,47 @@ export default function Relatorios() {
              ) : (
                <div className="h-[280px] flex items-center justify-center text-muted-foreground">Nenhum dado encontrado para o período selecionado</div>
              )}
-           </CardContent>
-         </Card>
- 
-         <Card className="glass-card lg:col-span-2">
-           <CardHeader><CardTitle className="text-base">Ranking de Clientes (Top 5)</CardTitle></CardHeader>
-           <CardContent>
-             {filteredData.topClientes.length > 0 ? (
-               <ResponsiveContainer width="100%" height={280}>
-                 <BarChart data={filteredData.topClientes} layout="vertical">
-                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                   <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$ ${v}`} />
-                   <YAxis dataKey="nome" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} width={120} />
-                   <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} formatter={(v: number) => formatCurrency(v)} />
-                   <Bar dataKey="total" fill="hsl(var(--success))" radius={[0, 4, 4, 0]} name="Total Gerado" />
-                 </BarChart>
-               </ResponsiveContainer>
-             ) : (
-               <div className="h-[280px] flex items-center justify-center text-muted-foreground">Nenhum dado encontrado para o período selecionado</div>
-             )}
-           </CardContent>
-         </Card>
-       </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader><CardTitle className="text-base">Top Contratos por Valor</CardTitle></CardHeader>
+            <CardContent>
+              {filteredData.topContratos.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={filteredData.topContratos} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$ ${v}`} />
+                    <YAxis dataKey="nome" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} width={120} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} formatter={(v: number) => formatCurrency(v)} />
+                    <Bar dataKey="valor" fill="hsl(217, 91%, 60%)" radius={[0, 4, 4, 0]} name="Valor Mensal" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-muted-foreground">Nenhum contrato cadastrado</div>
+              )}
+            </CardContent>
+          </Card>
+  
+          <Card className="glass-card">
+            <CardHeader><CardTitle className="text-base">Ranking de Clientes (Top 5)</CardTitle></CardHeader>
+            <CardContent>
+              {filteredData.topClientes.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={filteredData.topClientes} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$ ${v}`} />
+                    <YAxis dataKey="nome" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} width={120} />
+                    <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }} formatter={(v: number) => formatCurrency(v)} />
+                    <Bar dataKey="total" fill="hsl(142, 71%, 45%)" radius={[0, 4, 4, 0]} name="Total Gerado" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-muted-foreground">Nenhum dado encontrado para o período selecionado</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
  
        <div className="print-only mt-20 text-center text-xs text-muted-foreground border-t pt-4">
          Relatório gerado em {format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })} - Visionyx
