@@ -88,9 +88,10 @@ export default function OrdensServico() {
   const [dialogMode, setDialogMode] = useState<null | "create" | "edit">(null);
   const [viewDialog, setViewDialog] = useState(false);
   const [viewing, setViewing] = useState<any>(null);
-  const [editing, setEditing] = useState<any>(null);
-  const [uploading, setUploading] = useState(false);
-  const [legendaUpload, setLegendaUpload] = useState("");
+   const [editing, setEditing] = useState<any>(null);
+   const [uploading, setUploading] = useState(false);
+   const [legendaUpload, setLegendaUpload] = useState("");
+   const [recebimentoData, setRecebimentoData] = useState<any>(null);
 
   const form = useForm<OSFormValues>({
     resolver: zodResolver(osSchema),
@@ -181,27 +182,28 @@ export default function OrdensServico() {
       }
     }
 
-    if (editing) {
-      const editingId = editing.id;
-      const isFinalizing = (values.status === "finalizado" || values.status === "entregue") && (editing.status !== "finalizado" && editing.status !== "entregue");
-      closeDialog();
-      updateOS.mutate({ id: editingId, ...values } as any, {
-        onSuccess: (data) => {
-          if (isFinalizing) {
-            createConta.mutate({
-              descricao: `OS ${data.numero} - ${(data as any).clientes?.nome || "Cliente"}`,
-              valor: values.valor_mao_obra + values.valor_pecas,
-              vencimento: new Date().toISOString().split("T")[0],
-              tipo: "receber", categoria: "Serviços", status: "pendente",
-            });
-            values.pecas.forEach(async (p) => {
-              const peca = pecasData?.find(item => item.id === p.peca_id);
-              if (peca) await supabase.from("pecas").update({ quantidade: peca.quantidade - p.quantidade }).eq("id", p.peca_id);
-            });
-          }
-        }
-      });
-    } else {
+     if (editing) {
+       const isFinalizing = (values.status === "finalizado" || values.status === "entregue") && 
+                            (editing.status !== "finalizado" && editing.status !== "entregue");
+       
+       if (isFinalizing) {
+         setRecebimentoData({
+           id: editing.id,
+           numero: editing.numero,
+           cliente_id: values.cliente_id,
+           cliente_nome: clientes?.find(c => c.id === values.cliente_id)?.nome || "Cliente",
+           valor_mao_obra: values.valor_mao_obra,
+           valor_pecas: values.valor_pecas,
+           tipo: 'os',
+           items: values.pecas
+         });
+         return;
+       }
+ 
+       updateOS.mutate({ id: editing.id, ...values } as any, {
+         onSuccess: () => closeDialog()
+       });
+     } else {
       const clienteNome = clientes?.find(c => c.id === values.cliente_id)?.nome ?? "";
       closeDialog();
       createOS.mutate(values as any, {
@@ -238,8 +240,19 @@ export default function OrdensServico() {
 
   const isSaving = createOS.isPending || updateOS.isPending;
 
-  return (
-    <div className="space-y-6">
+   return (
+     <div className="space-y-6">
+       {recebimentoData && (
+         <ModalRecebimento 
+           isOpen={!!recebimentoData}
+           onClose={() => setRecebimentoData(null)}
+           onSuccess={() => {
+             setRecebimentoData(null);
+             closeDialog();
+           }}
+           data={recebimentoData}
+         />
+       )}
       <PageHeader title="Ordens de Serviço" description="Gerencie todas as ordens de serviço">
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Nova OS</Button>
       </PageHeader>
