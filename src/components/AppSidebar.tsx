@@ -1,9 +1,9 @@
- import {
-   LayoutDashboard, Users, Monitor, ClipboardList, FileText,
-   DollarSign, Package, BarChart3, Settings, LogOut, Wrench,
-   ShieldCheck, ShoppingCart, Building2, ShieldAlert, Sun, Moon,
-   Building
- } from "lucide-react";
+  import {
+    LayoutDashboard, Users, Monitor, ClipboardList, FileText,
+    DollarSign, Package, BarChart3, Settings, LogOut, Wrench,
+    ShieldCheck, ShoppingCart, Building2, ShieldAlert, Sun, Moon,
+    Building, Bell, User
+  } from "lucide-react";
  import { useTheme } from "next-themes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -17,22 +17,22 @@ import {
   SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 
-const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Clientes", url: "/clientes", icon: Users },
-  { title: "Equipamentos", url: "/equipamentos", icon: Monitor },
-  { title: "Ordens de Serviço", url: "/ordens", icon: ClipboardList },
-   { title: "Orçamentos", url: "/orcamentos", icon: FileText },
-   { title: "Contratos", url: "/contratos", icon: Building },
+ const mainItems = [
+   { title: "Dashboard", url: "/", icon: LayoutDashboard, color: "text-blue-500" },
+   { title: "Clientes", url: "/clientes", icon: Users, color: "text-indigo-500" },
+   { title: "Equipamentos", url: "/equipamentos", icon: Monitor, color: "text-sky-500" },
+   { title: "Ordens de Serviço", url: "/ordens", icon: ClipboardList, color: "text-amber-500" },
+   { title: "Orçamentos", url: "/orcamentos", icon: FileText, color: "text-emerald-500" },
+   { title: "Contratos", url: "/contratos", icon: Building, color: "text-violet-500" },
  ];
 
-const managementItems = [
-  { title: "Caixa / PDV", url: "/caixa", icon: ShoppingCart },
-  { title: "Financeiro", url: "/financeiro", icon: DollarSign },
-  { title: "Estoque", url: "/estoque", icon: Package },
-  { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
-];
+ const managementItems = [
+   { title: "Caixa / PDV", url: "/caixa", icon: ShoppingCart, color: "text-rose-500" },
+   { title: "Financeiro", url: "/financeiro", icon: DollarSign, color: "text-green-500" },
+   { title: "Estoque", url: "/estoque", icon: Package, color: "text-orange-500" },
+   { title: "Relatórios", url: "/relatorios", icon: BarChart3, color: "text-cyan-500" },
+   { title: "Configurações", url: "/configuracoes", icon: Settings, color: "text-slate-500" },
+ ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
