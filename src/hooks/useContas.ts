@@ -42,7 +42,12 @@ export function useCreateConta() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["contas"] }); toast.success("Conta criada!"); },
+    onSuccess: () => { 
+      qc.invalidateQueries({ queryKey: ["contas"] }); 
+      qc.invalidateQueries({ queryKey: ["dashboard"] }); 
+      qc.invalidateQueries({ queryKey: ["relatorios"] }); 
+      toast.success("Conta criada!"); 
+    },
     onError: (e) => toast.error("Erro: " + e.message),
   });
 }
@@ -55,7 +60,13 @@ export function useUpdateConta() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["contas"] }); toast.success("Conta atualizada!"); },
+    onSuccess: () => { 
+      qc.invalidateQueries({ queryKey: ["contas"] }); 
+      qc.invalidateQueries({ queryKey: ["dashboard"] }); 
+      qc.invalidateQueries({ queryKey: ["relatorios"] }); 
+      qc.invalidateQueries({ queryKey: ["movimentos_caixa"] }); 
+      toast.success("Conta atualizada!"); 
+    },
     onError: (e) => toast.error("Erro: " + e.message),
   });
 }
