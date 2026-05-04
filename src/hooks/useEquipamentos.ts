@@ -1,13 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
-export function useEquipamentos(clienteId?: string) {
-  const { companyId } = useEmpresa();
-  return useQuery({
-    queryKey: ["equipamentos", companyId, clienteId],
-    enabled: !!companyId,
+ export function useEquipamentos(clienteId?: string) {
+   return useQuery({
+     queryKey: ["equipamentos", clienteId],
     staleTime: 30000,
     queryFn: async () => {
       let query = supabase.from("equipamentos").select("*, clientes(nome)").order("created_at", { ascending: false });
@@ -21,19 +18,16 @@ export function useEquipamentos(clienteId?: string) {
 
 export function useCreateEquipamento() {
   const qc = useQueryClient();
-  const { companyId } = useEmpresa();
-  return useMutation({
-    mutationFn: async (input: {
-      tipo: string; marca: string; modelo?: string; numero_serie?: string;
-      cliente_id: string; acessorios?: string; defeito_relatado?: string;
-      senha_equipamento?: string; observacoes?: string;
-    }) => {
-       if (!companyId) throw new Error("Empresa não definida");
-       const sanitized = {
-         ...input,
-         company_id: companyId,
-         cliente_id: input.cliente_id || null,
-       };
+   return useMutation({
+     mutationFn: async (input: {
+       tipo: string; marca: string; modelo?: string; numero_serie?: string;
+       cliente_id: string; acessorios?: string; defeito_relatado?: string;
+       senha_equipamento?: string; observacoes?: string;
+     }) => {
+        const sanitized = {
+          ...input,
+          cliente_id: input.cliente_id || null,
+        };
        const { data, error } = await supabase.from("equipamentos").insert(sanitized as any).select("*, clientes(nome)").single();
        if (error) throw error;
       return data;

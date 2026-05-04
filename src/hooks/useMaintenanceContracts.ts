@@ -1,14 +1,11 @@
  import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
  import { supabase } from "@/integrations/supabase/client";
- import { useEmpresa } from "@/contexts/EmpresaContext";
  import { toast } from "sonner";
  import { format } from "date-fns";
  
  export function useMaintenanceContracts() {
-   const { companyId } = useEmpresa();
    return useQuery({
-     queryKey: ["contratos", companyId],
-     enabled: !!companyId,
+     queryKey: ["contratos"],
      queryFn: async () => {
        const { data, error } = await supabase
          .from("contratos")
@@ -22,13 +19,11 @@
  
  export function useCreateContract() {
    const qc = useQueryClient();
-   const { companyId } = useEmpresa();
    return useMutation({
      mutationFn: async (input: any) => {
-       if (!companyId) throw new Error("Empresa não definida");
        const { data, error } = await supabase
          .from("contratos")
-         .insert({ ...input, company_id: companyId })
+         .insert(input)
          .select()
          .single();
        if (error) throw error;
@@ -96,8 +91,6 @@
  
  export function useRegisterContractPayment() {
    const qc = useQueryClient();
-   const { companyId } = useEmpresa();
- 
    return useMutation({
      mutationFn: async (input: {
        contrato_id: string;
@@ -110,13 +103,10 @@
        observacoes?: string;
        caixa_id?: string;
      }) => {
-       if (!companyId) throw new Error("Empresa não definida");
- 
        // 1. Inserir em contrato_pagamentos
        const { data: pgto, error: e1 } = await supabase
          .from("contrato_pagamentos")
          .insert({
-           company_id: companyId,
            contrato_id: input.contrato_id,
            mes_referencia: input.mes_referencia,
            valor: input.valor,
@@ -132,7 +122,6 @@
  
        // 2. Inserir em contas
        const { error: e2 } = await supabase.from("contas").insert({
-         company_id: companyId,
          tipo: "receber",
          status: "recebido",
          categoria: "Contratos",
@@ -145,7 +134,6 @@
  
        // 3. Inserir em caixa_movimentos
         const { error: e3 } = await supabase.from("caixa_movimentos").insert({
-          company_id: companyId,
           caixa_id: input.caixa_id || null,
           tipo: "entrada",
           descricao: `Contrato ${input.empresa_nome} - ${input.mes_referencia}`,

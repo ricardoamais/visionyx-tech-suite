@@ -1,14 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
-export function useCaixaAberto() {
-  const { companyId } = useEmpresa();
-  return useQuery({
-    queryKey: ["caixa_aberto", companyId],
-    enabled: !!companyId,
+ export function useCaixaAberto() {
+   return useQuery({
+     queryKey: ["caixa_aberto"],
     staleTime: 10000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -24,11 +21,9 @@ export function useCaixaAberto() {
   });
 }
 
-export function useCaixas() {
-  const { companyId } = useEmpresa();
-  return useQuery({
-    queryKey: ["caixas", companyId],
-    enabled: !!companyId,
+ export function useCaixas() {
+   return useQuery({
+     queryKey: ["caixas"],
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -44,20 +39,18 @@ export function useCaixas() {
 
 export function useAbrirCaixa() {
   const qc = useQueryClient();
-  const { companyId } = useEmpresa();
-  const { user } = useAuth();
-  return useMutation({
-    mutationFn: async (input: { valor_abertura: number; observacoes?: string }) => {
-      if (!companyId || !user) throw new Error("Sessão inválida");
-      const { data, error } = await supabase
-        .from("caixas")
-        .insert({
-          company_id: companyId,
-          user_id: user.id,
-          valor_abertura: input.valor_abertura,
-          observacoes: input.observacoes ?? null,
-          status: "aberto",
-        })
+   const { user } = useAuth();
+   return useMutation({
+     mutationFn: async (input: { valor_abertura: number; observacoes?: string }) => {
+       if (!user) throw new Error("Sessão inválida");
+       const { data, error } = await supabase
+         .from("caixas")
+         .insert({
+           user_id: user.id,
+           valor_abertura: input.valor_abertura,
+           observacoes: input.observacoes ?? null,
+           status: "aberto",
+         })
         .select()
         .single();
       if (error) throw error;
@@ -130,59 +123,54 @@ export function useFecharCaixa() {
  
 export function useCreateVenda() {
   const qc = useQueryClient();
-  const { companyId } = useEmpresa();
-  return useMutation({
-    mutationFn: async (input: {
-      caixa_id: string;
-      cliente_id?: string | null;
-      forma_pagamento: "dinheiro" | "cartao_credito" | "cartao_debito" | "pix";
-      observacoes?: string;
-      itens: { peca_id: string; quantidade: number; valor_unitario: number }[];
-    }) => {
-      if (!companyId) throw new Error("Empresa não definida");
-      if (!input.itens.length) throw new Error("Adicione ao menos um item");
-      const valor_total = input.itens.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0);
-
-       // 1. Criar a venda (registro detalhado)
-       const { data: venda, error: e1 } = await (supabase.from("vendas") as any)
-         .insert({
-           company_id: companyId,
-           caixa_id: input.caixa_id,
-           cliente_id: input.cliente_id || null,
-           forma_pagamento: input.forma_pagamento,
-           observacoes: input.observacoes ?? null,
-           valor_total,
-           origem: 'pdv'
-         })
+   return useMutation({
+     mutationFn: async (input: {
+       caixa_id: string;
+       cliente_id?: string | null;
+       forma_pagamento: "dinheiro" | "cartao_credito" | "cartao_debito" | "pix";
+       observacoes?: string;
+       itens: { peca_id: string; quantidade: number; valor_unitario: number }[];
+     }) => {
+       if (!input.itens.length) throw new Error("Adicione ao menos um item");
+       const valor_total = input.itens.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0);
+ 
+        // 1. Criar a venda (registro detalhado)
+        const { data: venda, error: e1 } = await (supabase.from("vendas") as any)
+          .insert({
+            caixa_id: input.caixa_id,
+            cliente_id: input.cliente_id || null,
+            forma_pagamento: input.forma_pagamento,
+            observacoes: input.observacoes ?? null,
+            valor_total,
+            origem: 'pdv'
+          })
          .select()
          .single();
        if (e1) throw e1;
 
-       // 2. Lançar no caixa_movimentos (registro financeiro do caixa)
-       const { error: e3 } = await (supabase.from("caixa_movimentos") as any).insert({
-         company_id: companyId,
-         caixa_id: input.caixa_id,
-         tipo: 'entrada',
-         valor: valor_total,
-        descricao: input.itens.map(i => {
-          const peca = (venda.venda_itens as any[])?.find(p => p.peca_id === i.peca_id);
-          return `${i.quantidade}x ${peca?.pecas?.nome || 'Peça'}`;
-        }).join(", ") || `Venda PDV ${venda.id.slice(0, 8)}`,
-         forma_pagamento: input.forma_pagamento,
-         origem: 'pdv',
-         origem_id: venda.id
-       });
+        // 2. Lançar no caixa_movimentos (registro financeiro do caixa)
+        const { error: e3 } = await (supabase.from("caixa_movimentos") as any).insert({
+          caixa_id: input.caixa_id,
+          tipo: 'entrada',
+          valor: valor_total,
+         descricao: input.itens.map(i => {
+           const peca = (venda.venda_itens as any[])?.find(p => p.peca_id === i.peca_id);
+           return `${i.quantidade}x ${peca?.pecas?.nome || 'Peça'}`;
+         }).join(", ") || `Venda PDV ${venda.id.slice(0, 8)}`,
+          forma_pagamento: input.forma_pagamento,
+          origem: 'pdv',
+          origem_id: venda.id
+        });
        if (e3) throw e3;
 
-      const { error: e2 } = await supabase.from("venda_itens").insert(
-        input.itens.map((i) => ({
-          company_id: companyId,
-          venda_id: venda.id,
-          peca_id: i.peca_id,
-          quantidade: i.quantidade,
-          valor_unitario: i.valor_unitario,
-        }))
-      );
+       const { error: e2 } = await supabase.from("venda_itens").insert(
+         input.itens.map((i) => ({
+           venda_id: venda.id,
+           peca_id: i.peca_id,
+           quantidade: i.quantidade,
+           valor_unitario: i.valor_unitario,
+         }))
+       );
       if (e2) throw e2;
       // Buscar itens com nome da peça para impressão
       const { data: itensFull } = await supabase
