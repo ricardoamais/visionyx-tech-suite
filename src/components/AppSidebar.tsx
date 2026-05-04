@@ -8,7 +8,6 @@
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,15 +37,12 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { signOut, user, role, isSuperAdmin } = useAuth();
-  const { company } = useEmpresa();
+   const { signOut, user, role } = useAuth();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const isActive = (path: string) => location.pathname === path;
-   const isAdmin = role === "admin";
- 
-   const filteredManagementItems = managementItems.filter(item => 
-     isAdmin || !["Financeiro"].includes(item.title)
-   );
+    const filteredManagementItems = managementItems.filter(item => 
+      !["Financeiro"].includes(item.title)
+    );
  
    const { data: profile } = useQuery({
      queryKey: ["profile", user?.id],
@@ -61,25 +57,13 @@ export function AppSidebar() {
      <Sidebar collapsible="icon" className="border-r border-sidebar-border/30">
        <SidebarHeader className="p-6 border-b border-sidebar-border/50 bg-sidebar/50">
          <div className="flex items-center gap-4">
-           <div className="relative group/logo">
-             {company?.logo_url ? (
-               <img
-                 src={company.logo_url}
-                 alt="Logo"
-                 className="w-10 h-10 rounded-xl object-cover flex-shrink-0 shadow-lg group-hover/logo:scale-105 transition-transform"
-               />
-             ) : (
-               <div className="w-10 h-10 rounded-xl grad-blue flex items-center justify-center flex-shrink-0 shadow-lg group-hover/logo:scale-105 transition-transform">
-                 <span className="text-white text-base font-bold">
-                   {company?.name?.charAt(0) ?? 'V'}
-                 </span>
-               </div>
-             )}
-           </div>
+            <div className="w-10 h-10 rounded-xl grad-blue flex items-center justify-center flex-shrink-0 shadow-lg">
+              <span className="text-white text-base font-bold">V</span>
+            </div>
            {!collapsed && (
              <div className="min-w-0 flex flex-col">
                <h1 className="text-base font-bold text-sidebar-foreground tracking-tight truncate leading-tight">
-                 {company?.name || "Visionyx"}
+                  Visionyx
                </h1>
                <p className="text-[10px] text-muted-foreground truncate uppercase tracking-[0.1em] font-semibold mt-0.5 opacity-70">
                  Enterprise ERP
@@ -148,52 +132,6 @@ export function AppSidebar() {
                    </SidebarMenuButton>
                  </SidebarMenuItem>
                ))}
-               {(isAdmin || isSuperAdmin) && (
-                 <SidebarMenuItem>
-                   <SidebarMenuItem>
-                     <SidebarMenuButton 
-                      asChild 
-                      isActive={isActive("/equipe")} 
-                      tooltip="Equipe"
-                      className={`relative h-10 px-3 transition-all duration-200 group/btn
-                        ${isActive("/equipe") ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}
-                      `}
-                     >
-                       <NavLink to="/equipe" className="flex items-center w-full">
-                         {isActive("/equipe") && !collapsed && (
-                           <div className="absolute left-0 top-2 bottom-2 w-[3px] grad-blue rounded-r-full" />
-                         )}
-                         <div className={`p-1.5 rounded-lg transition-colors group-hover/btn:bg-sidebar-accent/80 ${isActive("/equipe") ? 'bg-sidebar-accent/50' : ''}`}>
-                          <ShieldCheck className={`w-4 h-4 ${isActive("/equipe") ? 'text-primary' : 'text-indigo-400'}`} />
-                         </div>
-                         {!collapsed && <span className="ml-3 font-medium text-[13px]">Equipe / Usuários</span>}
-                       </NavLink>
-                     </SidebarMenuButton>
-                   </SidebarMenuItem>
-                 </SidebarMenuItem>
-                 )}
-                 {isSuperAdmin && (
-                   <SidebarMenuItem>
-                     <SidebarMenuButton 
-                       asChild 
-                       isActive={isActive("/admin")} 
-                       tooltip="Gerenciar Plataforma"
-                       className={`relative h-10 px-3 transition-all duration-200 group/btn
-                         ${isActive("/admin") ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}
-                       `}
-                     >
-                       <NavLink to="/admin" className="flex items-center w-full">
-                         {isActive("/admin") && !collapsed && (
-                           <div className="absolute left-0 top-2 bottom-2 w-[3px] grad-blue rounded-r-full" />
-                         )}
-                         <div className={`p-1.5 rounded-lg transition-colors group-hover/btn:bg-sidebar-accent/80 ${isActive("/admin") ? 'bg-sidebar-accent/50' : ''}`}>
-                           <LayoutGrid className={`w-4 h-4 ${isActive("/admin") ? 'text-primary' : 'text-purple-500'}`} />
-                         </div>
-                         {!collapsed && <span className="ml-3 font-medium text-[13px]">Gerenciar Plataforma</span>}
-                       </NavLink>
-                     </SidebarMenuButton>
-                   </SidebarMenuItem>
-                 )}
              </SidebarMenu>
            </SidebarGroupContent>
          </SidebarGroup>

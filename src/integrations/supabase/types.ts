@@ -17,7 +17,7 @@ export type Database = {
       caixa_movimentos: {
         Row: {
           caixa_id: string | null
-          company_id: string
+          company_id: string | null
           created_at: string | null
           data_movimento: string | null
           descricao: string
@@ -30,7 +30,7 @@ export type Database = {
         }
         Insert: {
           caixa_id?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string | null
           data_movimento?: string | null
           descricao: string
@@ -43,7 +43,7 @@ export type Database = {
         }
         Update: {
           caixa_id?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string | null
           data_movimento?: string | null
           descricao?: string
@@ -73,7 +73,7 @@ export type Database = {
       }
       caixas: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           data_abertura: string
           data_fechamento: string | null
@@ -86,7 +86,7 @@ export type Database = {
           valor_fechamento: number | null
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           data_abertura?: string
           data_fechamento?: string | null
@@ -99,7 +99,7 @@ export type Database = {
           valor_fechamento?: number | null
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           data_abertura?: string
           data_fechamento?: string | null
@@ -115,7 +115,7 @@ export type Database = {
       }
       clientes: {
         Row: {
-          company_id: string
+          company_id: string | null
           cpf_cnpj: string | null
           created_at: string
           email: string | null
@@ -129,7 +129,7 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -143,7 +143,7 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -220,7 +220,7 @@ export type Database = {
       contas: {
         Row: {
           categoria: string | null
-          company_id: string
+          company_id: string | null
           created_at: string
           descricao: string
           forma_pagamento: string | null
@@ -236,7 +236,7 @@ export type Database = {
         }
         Insert: {
           categoria?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string
           descricao: string
           forma_pagamento?: string | null
@@ -252,7 +252,7 @@ export type Database = {
         }
         Update: {
           categoria?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           descricao?: string
           forma_pagamento?: string | null
@@ -414,21 +414,21 @@ export type Database = {
       }
       empresa_usuarios: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
@@ -448,7 +448,7 @@ export type Database = {
         Row: {
           acessorios: string | null
           cliente_id: string
-          company_id: string
+          company_id: string | null
           created_at: string
           defeito_relatado: string | null
           id: string
@@ -463,7 +463,7 @@ export type Database = {
         Insert: {
           acessorios?: string | null
           cliente_id: string
-          company_id: string
+          company_id?: string | null
           created_at?: string
           defeito_relatado?: string | null
           id?: string
@@ -478,7 +478,7 @@ export type Database = {
         Update: {
           acessorios?: string | null
           cliente_id?: string
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           defeito_relatado?: string | null
           id?: string
@@ -509,7 +509,7 @@ export type Database = {
       }
       orcamento_itens: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           descricao: string
           id: string
@@ -518,7 +518,7 @@ export type Database = {
           valor_unitario: number
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           descricao: string
           id?: string
@@ -527,7 +527,7 @@ export type Database = {
           valor_unitario?: number
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           descricao?: string
           id?: string
@@ -555,7 +555,7 @@ export type Database = {
       orcamentos: {
         Row: {
           cliente_id: string
-          company_id: string
+          company_id: string | null
           created_at: string
           id: string
           numero: string
@@ -567,7 +567,7 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
-          company_id: string
+          company_id?: string | null
           created_at?: string
           id?: string
           numero?: string
@@ -579,7 +579,7 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           id?: string
           numero?: string
@@ -616,7 +616,7 @@ export type Database = {
       ordens_servico: {
         Row: {
           cliente_id: string
-          company_id: string
+          company_id: string | null
           created_at: string
           data_entrada: string
           data_entrega: string | null
@@ -636,7 +636,7 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
-          company_id: string
+          company_id?: string | null
           created_at?: string
           data_entrada?: string
           data_entrega?: string | null
@@ -656,7 +656,7 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           data_entrada?: string
           data_entrega?: string | null
@@ -700,7 +700,7 @@ export type Database = {
       }
       os_fotos: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           id: string
           legenda: string | null
@@ -708,7 +708,7 @@ export type Database = {
           url: string
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           id?: string
           legenda?: string | null
@@ -716,7 +716,7 @@ export type Database = {
           url: string
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           id?: string
           legenda?: string | null
@@ -727,7 +727,7 @@ export type Database = {
       }
       os_pecas: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           id: string
           ordem_servico_id: string
@@ -736,7 +736,7 @@ export type Database = {
           valor_unitario: number
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           id?: string
           ordem_servico_id: string
@@ -745,7 +745,7 @@ export type Database = {
           valor_unitario?: number
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           id?: string
           ordem_servico_id?: string
@@ -779,7 +779,7 @@ export type Database = {
       }
       os_servicos: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           descricao: string
           id: string
@@ -789,7 +789,7 @@ export type Database = {
           valor_unitario: number
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           descricao: string
           id?: string
@@ -799,7 +799,7 @@ export type Database = {
           valor_unitario?: number
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           descricao?: string
           id?: string
@@ -834,7 +834,7 @@ export type Database = {
       }
       pecas: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           estoque_minimo: number
           id: string
@@ -845,7 +845,7 @@ export type Database = {
           valor_venda: number
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           estoque_minimo?: number
           id?: string
@@ -856,7 +856,7 @@ export type Database = {
           valor_venda?: number
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           estoque_minimo?: number
           id?: string
@@ -948,7 +948,7 @@ export type Database = {
         Row: {
           ativo: boolean
           categoria: string | null
-          company_id: string
+          company_id: string | null
           created_at: string
           descricao: string | null
           id: string
@@ -959,7 +959,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           categoria?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -970,7 +970,7 @@ export type Database = {
         Update: {
           ativo?: boolean
           categoria?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           descricao?: string | null
           id?: string
@@ -1019,7 +1019,7 @@ export type Database = {
       }
       venda_itens: {
         Row: {
-          company_id: string
+          company_id: string | null
           created_at: string
           id: string
           peca_id: string
@@ -1028,7 +1028,7 @@ export type Database = {
           venda_id: string
         }
         Insert: {
-          company_id: string
+          company_id?: string | null
           created_at?: string
           id?: string
           peca_id: string
@@ -1037,7 +1037,7 @@ export type Database = {
           venda_id: string
         }
         Update: {
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           id?: string
           peca_id?: string
@@ -1066,7 +1066,7 @@ export type Database = {
         Row: {
           caixa_id: string
           cliente_id: string | null
-          company_id: string
+          company_id: string | null
           created_at: string
           forma_pagamento: Database["public"]["Enums"]["venda_pagamento"]
           id: string
@@ -1079,7 +1079,7 @@ export type Database = {
         Insert: {
           caixa_id: string
           cliente_id?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string
           forma_pagamento: Database["public"]["Enums"]["venda_pagamento"]
           id?: string
@@ -1092,7 +1092,7 @@ export type Database = {
         Update: {
           caixa_id?: string
           cliente_id?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string
           forma_pagamento?: Database["public"]["Enums"]["venda_pagamento"]
           id?: string

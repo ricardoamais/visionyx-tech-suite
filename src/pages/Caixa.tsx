@@ -11,16 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
  import { DollarSign, Plus, Trash2, Lock, Unlock, ShoppingCart, Printer, Search, FileText, Wrench, CheckCircle2 } from "lucide-react";
-   import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda, useVendasCaixa } from "@/hooks/useCaixa";
- import { useOrcamentos } from "@/hooks/useOrcamentos";
- import { useOrdensServico } from "@/hooks/useOrdensServico";
- import { printRecibo } from "@/components/caixa/PrintRecibo";
- import { useQueryClient } from "@tanstack/react-query";
- import { supabase } from "@/integrations/supabase/client";
-import { usePecas } from "@/hooks/usePecas";
-import { useClientes } from "@/hooks/useClientes";
- import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
- import { QuickAddCliente } from "@/components/QuickAddCliente";
+  import { useCaixaAberto, useAbrirCaixa, useFecharCaixa, useMovimentosCaixa, useCreateVenda, useVendasCaixa } from "@/hooks/useCaixa";
+  import { useOrcamentos } from "@/hooks/useOrcamentos";
+  import { useOrdensServico } from "@/hooks/useOrdensServico";
+  import { printRecibo } from "@/components/caixa/PrintRecibo";
+  import { useQueryClient } from "@tanstack/react-query";
+  import { supabase } from "@/integrations/supabase/client";
+  import { usePecas } from "@/hooks/usePecas";
+  import { useClientes } from "@/hooks/useClientes";
+  import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
+  import { QuickAddCliente } from "@/components/QuickAddCliente";
 import { imprimirCupom } from "@/components/CupomVenda";
 import { format } from "date-fns";
 
@@ -95,16 +95,15 @@ export default function Caixa() {
        };
  
        // 1. Inserir movimento no caixa
-       const { error: errorMov } = await supabase.from('caixa_movimentos').insert({
-         company_id: caixaAberto.company_id,
-         caixa_id: caixaAberto.id,
-         tipo: 'entrada',
-         valor: valor,
-         descricao: descricao,
-         forma_pagamento: forma_pagamento,
-         origem: tipo,
-         origem_id: id,
-       });
+        const { error: errorMov } = await supabase.from('caixa_movimentos').insert({
+          caixa_id: caixaAberto.id,
+          tipo: 'entrada',
+          valor: valor,
+          descricao: descricao,
+          forma_pagamento: forma_pagamento,
+          origem: tipo,
+          origem_id: id,
+        });
        if (errorMov) throw errorMov;
  
        // 2. Atualizar conta para recebido (if exists)

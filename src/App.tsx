@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { EmpresaProvider, useEmpresa } from "@/contexts/EmpresaContext";
 import { AppLayout } from "@/components/AppLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -13,16 +12,12 @@ import Clientes from "./pages/Clientes";
 import Equipamentos from "./pages/Equipamentos";
 import OrdensServico from "./pages/OrdensServico";
 import Orcamentos from "./pages/Orcamentos";
-import Financeiro from "./pages/Financeiro";
-import Estoque from "./pages/Estoque";
+ import Estoque from "./pages/Estoque";
  import Relatorios from "./pages/Relatorios";
  import Configuracoes from "./pages/Configuracoes";
- import EquipeUsuarios from "./pages/EquipeUsuarios";
  import Contratos from "./pages/Contratos";
-import Admin from "./pages/Admin";
-import Caixa from "./pages/Caixa";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+ import Caixa from "./pages/Caixa";
+ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -33,18 +28,12 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  if (!user) return <Navigate to="/login" replace />;
-  return <EmpresaProvider><EmpresaGate>{children}</EmpresaGate></EmpresaProvider>;
-};
-
-const EmpresaGate = ({ children }: { children: ReactNode }) => {
-  const { loading } = useEmpresa();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  return <>{children}</>;
-};
+ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+   const { user, loading } = useAuth();
+   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+   if (!user) return <Navigate to="/login" replace />;
+   return <>{children}</>;
+ };
 
 const PublicRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -77,7 +66,6 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
               <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/clientes" element={<Clientes />} />
@@ -85,12 +73,9 @@ const App = () => (
                 <Route path="/ordens" element={<OrdensServico />} />
                  <Route path="/orcamentos" element={<Orcamentos />} />
                  <Route path="/contratos" element={<Contratos />} />
-                 <Route path="/financeiro" element={<AdminRoute><Financeiro /></AdminRoute>} />
-                <Route path="/estoque" element={<Estoque />} />
-                <Route path="/relatorios" element={<Relatorios />} />
+                 <Route path="/estoque" element={<Estoque />} />
+                 <Route path="/relatorios" element={<Relatorios />} />
                  <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/equipe" element={<AdminRoute><EquipeUsuarios /></AdminRoute>} />
-                <Route path="/admin" element={<SuperAdminRoute><Admin /></SuperAdminRoute>} />
                 <Route path="/caixa" element={<Caixa />} />
               </Route>
               <Route path="*" element={<NotFound />} />

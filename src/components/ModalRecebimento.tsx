@@ -5,7 +5,6 @@
  import { Input } from "@/components/ui/input";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Textarea } from "@/components/ui/textarea";
- import { useEmpresa } from "@/contexts/EmpresaContext";
  import { supabase } from "@/integrations/supabase/client";
  import { useQueryClient } from "@tanstack/react-query";
  import { toast } from "sonner";
@@ -28,9 +27,8 @@
    };
  }
  
- export function ModalRecebimento({ isOpen, onClose, onSuccess, data }: ModalRecebimentoProps) {
-   const { companyId } = useEmpresa();
-   const queryClient = useQueryClient();
+  export function ModalRecebimento({ isOpen, onClose, onSuccess, data }: ModalRecebimentoProps) {
+    const queryClient = useQueryClient();
    const { data: caixaAberto } = useCaixaAberto();
    
    const [formaPagamento, setFormaPagamento] = useState<string>("");
@@ -78,18 +76,17 @@
             .eq('id', existingConta.id);
           if (contaErr) throw contaErr;
         } else {
-          const { error: contaErr } = await (supabase.from('contas' as any) as any).insert({
-            company_id: companyId,
-            descricao: `${data.numero} - ${data.cliente_nome}`,
-            valor: totalFinal,
-            vencimento: new Date().toISOString().split('T')[0],
-            tipo: 'receber',
-            categoria: data.tipo === 'os' ? 'Serviços' : 'Orçamentos',
-            status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
-            forma_pagamento: finalFormaPagamento,
-            ordem_servico_id: data.tipo === 'os' ? data.id : null,
-            orcamento_id: data.tipo === 'orcamento' ? data.id : null,
-          } as any);
+           const { error: contaErr } = await (supabase.from('contas' as any) as any).insert({
+             descricao: `${data.numero} - ${data.cliente_nome}`,
+             valor: totalFinal,
+             vencimento: new Date().toISOString().split('T')[0],
+             tipo: 'receber',
+             categoria: data.tipo === 'os' ? 'Serviços' : 'Orçamentos',
+             status: finalFormaPagamento === 'fiado' ? 'pendente' : 'recebido',
+             forma_pagamento: finalFormaPagamento,
+             ordem_servico_id: data.tipo === 'os' ? data.id : null,
+             orcamento_id: data.tipo === 'orcamento' ? data.id : null,
+           } as any);
           if (contaErr) throw contaErr;
         }
  
@@ -98,16 +95,15 @@
           if (!caixaAberto) {
             toast.warning("Pagamento registrado no financeiro, mas o caixa está fechado.");
           } else {
-            const { error: movErr } = await (supabase.from('caixa_movimentos' as any) as any).insert({
-              company_id: companyId,
-              caixa_id: caixaAberto.id,
-              tipo: 'entrada',
-              valor: totalFinal,
-              descricao: `${data.numero} - ${data.cliente_nome}`,
-              forma_pagamento: finalFormaPagamento,
-              origem: data.tipo,
-              origem_id: data.id,
-            } as any);
+             const { error: movErr } = await (supabase.from('caixa_movimentos' as any) as any).insert({
+               caixa_id: caixaAberto.id,
+               tipo: 'entrada',
+               valor: totalFinal,
+               descricao: `${data.numero} - ${data.cliente_nome}`,
+               forma_pagamento: finalFormaPagamento,
+               origem: data.tipo,
+               origem_id: data.id,
+             } as any);
  
             if (movErr) throw movErr;
           }

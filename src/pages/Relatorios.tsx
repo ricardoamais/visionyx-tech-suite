@@ -1,7 +1,6 @@
    import { useState, useMemo } from "react";
    import { useQuery } from "@tanstack/react-query";
    import { supabase } from "@/integrations/supabase/client";
-   import { useEmpresa } from "@/contexts/EmpresaContext";
  import { PageHeader } from "@/components/PageHeader";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -31,26 +30,24 @@ export default function Relatorios() {
    });
    const [activeFilter, setActiveFilter] = useState<string>("30d");
  
-   const { companyId } = useEmpresa();
-   const { data: ordensServico = [] } = useOrdensServico();
+    const { data: ordensServico = [] } = useOrdensServico();
    const { data: orcamentos = [] } = useOrcamentos();
    const { data: contratos = [] } = useMaintenanceContracts();
    
-   const { data: movimentos = [], isLoading: loadingMov } = useQuery({
-     queryKey: ["relatorios-movimentos", companyId, dateRange],
-     enabled: !!companyId && !!dateRange?.from && !!dateRange?.to,
-     queryFn: async () => {
-       const { data, error } = await supabase
-         .from("caixa_movimentos")
-         .select("*")
-         .eq("company_id", companyId)
-         .gte("created_at", startOfDay(dateRange!.from!).toISOString())
-         .lte("created_at", endOfDay(dateRange!.to!).toISOString())
-         .order("created_at", { ascending: false });
-       if (error) throw error;
-       return data;
-     }
-   });
+    const { data: movimentos = [], isLoading: loadingMov } = useQuery({
+      queryKey: ["relatorios-movimentos", dateRange],
+      enabled: !!dateRange?.from && !!dateRange?.to,
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("caixa_movimentos")
+          .select("*")
+          .gte("created_at", startOfDay(dateRange!.from!).toISOString())
+          .lte("created_at", endOfDay(dateRange!.to!).toISOString())
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data;
+      }
+    });
  
    const handleFilterChange = (filter: string) => {
      setActiveFilter(filter);

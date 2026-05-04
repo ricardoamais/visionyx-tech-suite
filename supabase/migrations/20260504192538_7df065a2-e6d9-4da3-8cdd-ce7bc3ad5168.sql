@@ -1,0 +1,16 @@
+ALTER TABLE public.clientes ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.os_pecas ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.ordens_servico ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.pecas ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.contas ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.orcamento_itens ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.equipamentos ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.orcamentos ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.os_fotos ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.empresa_usuarios ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.vendas ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.venda_itens ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.caixas ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.caixa_movimentos ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.os_servicos ALTER COLUMN company_id DROP NOT NULL;
+ALTER TABLE public.servicos_catalogo ALTER COLUMN company_id DROP NOT NULL;

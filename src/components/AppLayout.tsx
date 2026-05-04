@@ -2,7 +2,6 @@
  import { AppSidebar } from "@/components/AppSidebar";
  import { Outlet, useLocation, Link } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { BillingManager } from "./BillingManager";
 
  import { Bell, Search, ChevronRight } from "lucide-react";
  import { Button } from "@/components/ui/button";
@@ -32,7 +31,6 @@ import { BillingManager } from "./BillingManager";
 
    return (
      <SidebarProvider>
-       <BillingManager />
        <div className="min-h-screen flex w-full bg-background">
          <AppSidebar />
          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
