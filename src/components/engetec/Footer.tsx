@@ -1,4 +1,4 @@
-import { Hammer, Instagram, Facebook, Mail, MapPin, Phone } from 'lucide-react';
+import { Hammer, Mail, MapPin, Phone } from 'lucide-react';
 
 export const Footer = () => {
   return (
@@ -20,14 +20,14 @@ export const Footer = () => {
             </p>
             <div className="flex gap-4">
               <a href="#" className="bg-white/10 p-2 rounded-full hover:bg-[#f5a623] transition-colors">
-                <Instagram size={20} />
-              </a>
-              <a href="#" className="bg-white/10 p-2 rounded-full hover:bg-[#f5a623] transition-colors">
-                <Facebook size={20} />
-              </a>
-              <a href="#" className="bg-white/10 p-2 rounded-full hover:bg-[#f5a623] transition-colors">
                 <Mail size={20} />
               </a>
+              <div className="bg-white/10 p-2 rounded-full hover:bg-[#f5a623] transition-colors cursor-pointer">
+                <span className="font-bold text-xs">IG</span>
+              </div>
+              <div className="bg-white/10 p-2 rounded-full hover:bg-[#f5a623] transition-colors cursor-pointer">
+                <span className="font-bold text-xs">FB</span>
+              </div>
             </div>
           </div>
 
@@ -62,7 +62,7 @@ export const Footer = () => {
             </ul>
           </div>
 
-          {/* Newsletter / Badge */}
+          {/* Location Info */}
           <div>
             <h4 className="text-lg font-bold mb-6 text-[#f5a623]">Localização</h4>
             <p className="text-gray-400 text-sm mb-4">
