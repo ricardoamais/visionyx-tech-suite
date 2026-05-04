@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
 export function useOSFotos(osId?: string | null) {
@@ -21,15 +20,13 @@ export function useOSFotos(osId?: string | null) {
 
 export function useAddOSFoto() {
   const qc = useQueryClient();
-  const { companyId } = useEmpresa();
-  return useMutation({
-    mutationFn: async (input: { ordem_servico_id: string; url: string; legenda?: string }) => {
-      if (!companyId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase
-        .from("os_fotos")
-        .insert({ ...input, company_id: companyId })
-        .select()
-        .single();
+   return useMutation({
+     mutationFn: async (input: { ordem_servico_id: string; url: string; legenda?: string }) => {
+       const { data, error } = await supabase
+         .from("os_fotos")
+         .insert(input)
+         .select()
+         .single();
       if (error) throw error;
       return data;
     },

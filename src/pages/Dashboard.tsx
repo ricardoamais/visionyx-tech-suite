@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 
 const statusMap: Record<string, string> = {
   aberto: "Aberto",
@@ -18,11 +17,9 @@ const statusMap: Record<string, string> = {
   entregue: "Entregue",
 };
 
-export default function Dashboard() {
-  const { companyId } = useEmpresa();
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["dashboard-stats", companyId],
-    enabled: !!companyId,
+ export default function Dashboard() {
+   const { data: stats, isLoading } = useQuery({
+     queryKey: ["dashboard-stats"],
     staleTime: 0,
     refetchOnWindowFocus: true,
     queryFn: async () => {
@@ -36,32 +33,27 @@ export default function Dashboard() {
       sixMonthsAgo.setHours(0, 0, 0, 0);
 
       const [osRes, orcRes, movimentosRes, contasRes, contratoPagRes] = await Promise.all([
-        supabase
-          .from("ordens_servico")
-          .select("id, status, numero, created_at, clientes(nome)")
-          .eq("company_id", companyId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("orcamentos")
-          .select("id, status")
-          .eq("company_id", companyId),
-        supabase
-          .from("caixa_movimentos")
-          .select("valor, created_at, tipo, origem")
-          .eq("company_id", companyId)
-          .gte("created_at", sixMonthsAgo.toISOString()),
-        supabase
-          .from("contas")
-          .select("valor, tipo, status")
-          .eq("company_id", companyId)
-          .eq("status", "pendente"),
-        supabase
-          .from("contrato_pagamentos")
-          .select("valor, data_pagamento")
-          .eq("company_id", companyId)
-          .eq("status", "pago")
-          .gte("data_pagamento", inicioMes.split('T')[0])
-          .lte("data_pagamento", fimMes.split('T')[0]),
+         supabase
+           .from("ordens_servico")
+           .select("id, status, numero, created_at, clientes(nome)")
+           .order("created_at", { ascending: false }),
+         supabase
+           .from("orcamentos")
+           .select("id, status"),
+         supabase
+           .from("caixa_movimentos")
+           .select("valor, created_at, tipo, origem")
+           .gte("created_at", sixMonthsAgo.toISOString()),
+         supabase
+           .from("contas")
+           .select("valor, tipo, status")
+           .eq("status", "pendente"),
+         supabase
+           .from("contrato_pagamentos")
+           .select("valor, data_pagamento")
+           .eq("status", "pago")
+           .gte("data_pagamento", inicioMes.split('T')[0])
+           .lte("data_pagamento", fimMes.split('T')[0]),
       ]);
 
       const os = osRes.data || [];

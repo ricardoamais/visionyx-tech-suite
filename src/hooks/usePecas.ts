@@ -1,13 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 import { toast } from "sonner";
 
-export function usePecas() {
-  const { companyId } = useEmpresa();
-  return useQuery({
-    queryKey: ["pecas", companyId],
-    enabled: !!companyId,
+ export function usePecas() {
+   return useQuery({
+     queryKey: ["pecas"],
     staleTime: 30000,
     queryFn: async () => {
       const { data, error } = await supabase.from("pecas").select("*").order("nome");
@@ -19,14 +16,12 @@ export function usePecas() {
 
 export function useCreatePeca() {
   const qc = useQueryClient();
-  const { companyId } = useEmpresa();
-  return useMutation({
-    mutationFn: async (input: { nome: string; quantidade?: number; valor_compra?: number; valor_venda?: number; estoque_minimo?: number }) => {
-      if (!companyId) throw new Error("Empresa não definida");
-      const { data, error } = await supabase.from("pecas").insert({ ...input, company_id: companyId }).select().single();
-      if (error) throw error;
-      return data;
-    },
+   return useMutation({
+     mutationFn: async (input: { nome: string; quantidade?: number; valor_compra?: number; valor_venda?: number; estoque_minimo?: number }) => {
+       const { data, error } = await supabase.from("pecas").insert(input).select().single();
+       if (error) throw error;
+       return data;
+     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["pecas"] }); toast.success("Peça cadastrada!"); },
     onError: (e) => toast.error("Erro: " + e.message),
   });
