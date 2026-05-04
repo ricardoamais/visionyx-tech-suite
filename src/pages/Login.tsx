@@ -60,10 +60,6 @@ export default function Login() {
             <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground text-[10px] tracking-widest">Ou</span></div>
           </div>
           
-          <div className="text-center space-y-1">
-            <p className="text-sm text-muted-foreground">Novo por aqui?</p>
-            <Link to="/register" className="text-primary hover:underline font-medium text-sm block">Cadastre sua Empresa</Link>
-          </div>
         </CardContent>
       </Card>
     </div>
