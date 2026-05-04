@@ -2,7 +2,7 @@
     LayoutDashboard, Users, Monitor, ClipboardList, FileText,
     DollarSign, Package, BarChart3, Settings, LogOut, Wrench,
     ShieldCheck, ShoppingCart, Building2, ShieldAlert, Sun, Moon,
-    Building, Bell, User
+     Building, Bell, User, LayoutGrid
   } from "lucide-react";
  import { useTheme } from "next-themes";
 import { NavLink } from "@/components/NavLink";
@@ -171,7 +171,29 @@ export function AppSidebar() {
                      </SidebarMenuButton>
                    </SidebarMenuItem>
                  </SidebarMenuItem>
-               )}
+                 )}
+                 {isSuperAdmin && (
+                   <SidebarMenuItem>
+                     <SidebarMenuButton 
+                       asChild 
+                       isActive={isActive("/admin")} 
+                       tooltip="Gerenciar Plataforma"
+                       className={`relative h-10 px-3 transition-all duration-200 group/btn
+                         ${isActive("/admin") ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50'}
+                       `}
+                     >
+                       <NavLink to="/admin" className="flex items-center w-full">
+                         {isActive("/admin") && !collapsed && (
+                           <div className="absolute left-0 top-2 bottom-2 w-[3px] grad-blue rounded-r-full" />
+                         )}
+                         <div className={`p-1.5 rounded-lg transition-colors group-hover/btn:bg-sidebar-accent/80 ${isActive("/admin") ? 'bg-sidebar-accent/50' : ''}`}>
+                           <LayoutGrid className={`w-4 h-4 ${isActive("/admin") ? 'text-primary' : 'text-purple-500'}`} />
+                         </div>
+                         {!collapsed && <span className="ml-3 font-medium text-[13px]">Gerenciar Plataforma</span>}
+                       </NavLink>
+                     </SidebarMenuButton>
+                   </SidebarMenuItem>
+                 )}
              </SidebarMenu>
            </SidebarGroupContent>
          </SidebarGroup>
