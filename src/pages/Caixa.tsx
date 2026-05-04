@@ -19,7 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
  import { supabase } from "@/integrations/supabase/client";
 import { usePecas } from "@/hooks/usePecas";
 import { useClientes } from "@/hooks/useClientes";
- import { useEmpresaConfig } from "@/hooks/useEmpresaConfig";
  import { QuickAddCliente } from "@/components/QuickAddCliente";
 import { imprimirCupom } from "@/components/CupomVenda";
 import { format } from "date-fns";
@@ -95,16 +94,15 @@ export default function Caixa() {
        };
  
        // 1. Inserir movimento no caixa
-       const { error: errorMov } = await supabase.from('caixa_movimentos').insert({
-         company_id: caixaAberto.company_id,
-         caixa_id: caixaAberto.id,
-         tipo: 'entrada',
-         valor: valor,
-         descricao: descricao,
-         forma_pagamento: forma_pagamento,
-         origem: tipo,
-         origem_id: id,
-       });
+        const { error: errorMov } = await supabase.from('caixa_movimentos').insert({
+          caixa_id: caixaAberto.id,
+          tipo: 'entrada',
+          valor: valor,
+          descricao: descricao,
+          forma_pagamento: forma_pagamento,
+          origem: tipo,
+          origem_id: id,
+        });
        if (errorMov) throw errorMov;
  
        // 2. Atualizar conta para recebido (if exists)
